@@ -7,3 +7,9 @@
 - FnNAS images and proprietary kernel features are supplied by the FnNAS/ophub release. Their respective terms remain applicable; this repository does not contain or claim ownership of their source.
 
 The generated module archive includes the exact modified driver source, private headers, patch and license needed for inspection. A successful compile is not hardware validation.
+
+Factory LAN sharing uses the base image's NetworkManager 1.42 and dnsmasq-base,
+with standard `ipv4.method=shared` for DHCP, DNS and NAT. See the
+[NetworkManager IPv4 reference](https://networkmanager.dev/docs/api/1.42.0/settings-ipv4.html).
+The profiles and physical-controller naming rules are installed offline, not
+recreated by a boot-time configuration reset service.

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Exercise the image's real NetworkManager in disposable network namespaces."""
-import configparser
 import http.client
 import ipaddress
 import json
@@ -37,7 +36,7 @@ def dhcp(interface):
 
         def exchange(message, expected):
             for _ in range(12):
-                sock.sendto(header + cookie + message + b'\xff', ('255.255.255.255', 67))
+                sock.sendto((header + cookie + message + b'\xff').ljust(300, b'\0'), ('255.255.255.255', 67))
                 deadline = time.monotonic() + 1
                 while time.monotonic() < deadline:
                     try:
@@ -110,6 +109,8 @@ def inside():
 
     try:
         Path('/etc/machine-id').write_text(secrets.token_hex(16) + '\n')
+        Path('/etc/NetworkManager/dnsmasq-shared.d').mkdir(parents=True, exist_ok=True)
+        Path('/etc/NetworkManager/dnsmasq-shared.d/test.conf').write_text('log-dhcp\n')
         Path('/run/dbus').mkdir(parents=True, exist_ok=True)
         spawn('dbus', 'dbus-daemon', '--system', '--nofork', '--nopidfile')
         wait_for('D-Bus', lambda: Path('/run/dbus/system_bus_socket').exists())
@@ -127,22 +128,21 @@ def inside():
                 run('ip', '-n', namespace, 'addr', 'add', '10.77.0.1/32', 'dev', 'lo')
             else:
                 run('ip', '-n', namespace, 'link', 'set', peer, 'up')
-        # A veth stands in for the modem only in this disposable overlay. The
-        # real image's USB-driver match is separately checked and unchanged.
-        path = Path('/etc/NetworkManager/system-connections/photonicat-5g.nmconnection')
-        profile = configparser.ConfigParser(interpolation=None)
-        profile.read(path)
-        profile.remove_section('match')
-        profile['connection']['interface-name'] = 'pcat5gtest'
-        with path.open('w') as stream:
-            profile.write(stream)
         run('udevadm', 'trigger', '--subsystem-match=net')
         run('udevadm', 'settle', '--timeout=10')
-        spawn('NetworkManager', 'NetworkManager', '--no-daemon')
+        spawn('NetworkManager', 'NetworkManager', '--debug')
         wait_for('NetworkManager', lambda: output('nmcli', '-t', '-f', 'RUNNING', 'general') == 'running')
+        drivers = output('nmcli', '-g', 'match.driver', 'connection', 'show', 'Photonicat 5G')
+        assert all(name in drivers for name in ('cdc_ether', 'rndis_host', 'cdc_ncm')), drivers
+        # The shipped profile is parsed by the image's actual NetworkManager
+        # before substituting a veth for the USB hardware in this overlay only.
+        run('nmcli', 'connection', 'modify', 'Photonicat 5G', 'match.driver', '',
+            'connection.interface-name', 'pcat5gtest')
         for interface in ('pcatlan0', 'pcatwan0', 'pcat5gtest'):
             run('nmcli', 'device', 'set', interface, 'managed', 'yes')
         run('nmcli', '--wait', '15', 'connection', 'up', 'Photonicat LAN')
+        run('nmcli', '-f', 'GENERAL,IP4', 'device', 'show', 'pcatlan0')
+        run('ss', '-lunp')
         lease = json.loads(output('ip', 'netns', 'exec', 'client', 'python3', '/tmp/router-integration.py', '--dhcp', 'lanpeer'))
         print('PASS: LAN DHCP, gateway and DNS work with both uplinks offline', flush=True)
         for namespace, peer, gateway in (('mobile', 'modempeer', '192.168.100.1'), ('wired', 'wanpeer', '192.168.66.1')):
@@ -179,6 +179,8 @@ def inside():
                   'checks': ['offline_lan_dhcp_dns_options', '5g_priority', 'dns_forwarding', 'nat',
                              'docker_forward_drop_policy', 'wired_fallback', '5g_recovery']}))
     finally:
+        for command in (('ip', '-br', 'addr'), ('ip', 'route'), ('iptables', '-S'), ('iptables', '-t', 'nat', '-S')):
+            subprocess.run(command, check=False)
         for process in reversed(processes):
             process.terminate()
         for process in reversed(processes):
@@ -208,6 +210,8 @@ def sandbox(root, directory):
     run('mount', '-t', 'sysfs', 'sysfs', str(merged / 'sys'))
     for name, minor in (('null', 3), ('zero', 5), ('random', 8), ('urandom', 9)):
         os.mknod(merged / 'dev' / name, 0o20666, os.makedev(1, minor))
+        (merged / 'dev' / name).chmod(0o666)
+    (merged / 'dev/fd').symlink_to('/proc/self/fd')
     shutil.copy2(__file__, merged / 'tmp/router-integration.py')
     run('chroot', str(merged), '/usr/bin/env', '-i', 'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL=C',
         'python3', '/tmp/router-integration.py', '--inside')
