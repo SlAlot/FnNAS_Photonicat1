@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "target": {
+    "board": "photonicat",
+    "soc": "rk3568",
+    "release_tag": "fnnas_rockchip_1253",
+    "kernel_release": "6.18.18-trim",
+    "image": {
+      "url": "https://github.com/ophub/fnnas/releases/download/fnnas_rockchip_1253/fnnas_rockchip_photonicat_k6.18.18_2026.09.23.img.gz",
+      "sha256": "0a35032829a7b7f4dabe841790647b367044189693eeb5594005d13ea95a6b8d",
+      "size": 1836939084
+    },
+    "kernel": {
+      "url": "https://github.com/ophub/fnnas/releases/download/kernel_fnnas/6.18.18-rockchip.tar.gz",
+      "sha256": "898b32f1134202a62c1ed95e892da8418a6011b119ed575cd1b3e2e0615ebe2c",
+      "size": 110558766
+    },
+    "original_module_sha256": "384e73ed7fa15a47b6032e8c3f6480704dea10711ac671255fe1dbe29ad0754b",
+    "original_dtb_sha256": "7fd9e53ab29fe4a30d670cf68496b43181824f4d4db5c68ce3b39edb7dd9ec5d"
+  },
+  "linux": {
+    "repository": "gregkh/linux",
+    "ref": "v6.18.18",
+    "files": [
+      {
+        "name": "common.h",
+        "blob": "9e012720a69fa3702382f77018cc3793f0f810a6",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/common.h"
+      },
+      {
+        "name": "descs.h",
+        "blob": "49d6a866244f47d7d0967b4e9372955afb8ce730",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/descs.h"
+      },
+      {
+        "name": "descs_com.h",
+        "blob": "40f7f2da9c5e62cdd84a33066557501efb82e209",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/descs_com.h"
+      },
+      {
+        "name": "dwmac-intel.h",
+        "blob": "7511c224b312592b4c9621c972ad079f563457f4",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac-intel.h"
+      },
+      {
+        "name": "dwmac-rk.c",
+        "blob": "643578266dfca767ca22ff7593c0a8f132f478a0",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c"
+      },
+      {
+        "name": "dwmac100.h",
+        "blob": "7ab791c8d355fb056a9f92b1747ddeee579a97d7",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac100.h"
+      },
+      {
+        "name": "dwmac1000.h",
+        "blob": "0c011a47d5a3e98280a98d25b8ef3614684ae78c",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac1000.h"
+      },
+      {
+        "name": "dwmac4.h",
+        "blob": "3dec1a264cf60995cb4aeb2bd9092e137fe6a45e",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac4.h"
+      },
+      {
+        "name": "dwmac4_descs.h",
+        "blob": "806555976496ed575edbe21c4f8da073430cbe3e",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac4_descs.h"
+      },
+      {
+        "name": "dwmac4_dma.h",
+        "blob": "4f980dcd39582399616d49016b7548999b3f9cfd",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac4_dma.h"
+      },
+      {
+        "name": "dwmac5.h",
+        "blob": "00b151b3b6887e8928603985ced6d12f98d0cc79",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac5.h"
+      },
+      {
+        "name": "dwmac_dma.h",
+        "blob": "5d9c18f5bbf58729907a1c208c3079007d6570f5",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwmac_dma.h"
+      },
+      {
+        "name": "dwxgmac2.h",
+        "blob": "0d408ee17f337851502cbcba8e82d2b839b9db02",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwxgmac2.h"
+      },
+      {
+        "name": "dwxlgmac2.h",
+        "blob": "726090d4922166c123bff282201ab077b306482b",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/dwxlgmac2.h"
+      },
+      {
+        "name": "hwif.h",
+        "blob": "14dbe0685997db5f0432445c1bb3c45ace16ce26",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/hwif.h"
+      },
+      {
+        "name": "mmc.h",
+        "blob": "1cba39fb2c44ccce9a1ebd7d893fed112bb5e76f",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/mmc.h"
+      },
+      {
+        "name": "stmmac.h",
+        "blob": "865531d6cd3b8bc54ecb1eef423be909e650553d",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac.h"
+      },
+      {
+        "name": "stmmac_est.h",
+        "blob": "f70221c9c84afe6bce62782c7847a8005e469dd7",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_est.h"
+      },
+      {
+        "name": "stmmac_fpe.h",
+        "blob": "3fc46acf7001bdf102f9c85ddddbe8ad10ed94a3",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_fpe.h"
+      },
+      {
+        "name": "stmmac_pcs.h",
+        "blob": "4a684c97dfaeb1b4fbcb02ddc0a1f1f962fe6ca2",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_pcs.h"
+      },
+      {
+        "name": "stmmac_platform.h",
+        "blob": "6e6561e29d6e3b823a4ab096a6e7760102bc9944",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.h"
+      },
+      {
+        "name": "stmmac_ptp.h",
+        "blob": "3fe0e3a80e80ac594a7af71f39adaf59de39d6ec",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_ptp.h"
+      },
+      {
+        "name": "stmmac_vlan.h",
+        "blob": "c24f89a9049b88e99d3b5e73fd7e2e00dabad876",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_vlan.h"
+      },
+      {
+        "name": "stmmac_xdp.h",
+        "blob": "77ce8cfbe976fb9583fcb9a9d021a7cdce61d05b",
+        "url": "https://raw.githubusercontent.com/gregkh/linux/v6.18.18/drivers/net/ethernet/stmicro/stmmac/stmmac_xdp.h"
+      }
+    ]
+  },
+  "upstream": {
+    "repository": "ophub/fnnas",
+    "commit": "b29fd6a3b2f09f96f941279f00dd4d67b5d42346"
+  },
+  "official_board": {
+    "repository": "photonicat/rockchip_rk3568_linux_mainline",
+    "commit": "aea14d28d6a909dec2d2154613d157d23bbc6a77",
+    "legacy_sgmii_patch": "patches/kernel/113-ethernet-stmicro-stmmac-Add-SGMII-QSGMII-support.patch",
+    "patch_sha256": "b0c0ffea4d6c60b323610f8a79dba5f178f49ddeb9eec5acd76d03b0733f27b0"
+  }
+}
