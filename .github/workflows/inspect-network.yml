@@ -1,0 +1,28 @@
+name: Inspect base network
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y btrfs-progs
+          sudo modprobe btrfs
+          python3 scripts/fetch-inputs.py image work/base.img.gz
+          gzip -dc work/base.img.gz > work/base.img
+          image_loop=$(sudo losetup --find --show --partscan work/base.img)
+          audit_root=$(mktemp -d)
+          trap 'sudo umount "$audit_root"; sudo losetup -d "$image_loop"' EXIT
+          sudo mount -t btrfs -o ro "${image_loop}p2" "$audit_root"
+          sudo python3 scripts/audit-network.py "$audit_root" > work/network-audit.json
+          cat work/network-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: base-network-audit
+          path: work/network-audit.json
+          retention-days: 7
