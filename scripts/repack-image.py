@@ -89,7 +89,14 @@ def main():
             shutil.copy2(installed, backup/'dwmac-rk.ko')
             shutil.copy2(dtb, backup/dtb.name)
             shutil.copy2(module, installed)
-            run('depmod', '-b', str(root), release)
+            # FnNAS has absolute links to /usr/trim/modules. Resolve them in
+            # the target root, never against the build runner's filesystem.
+            dependency = run('chroot', str(root), '/usr/bin/env', '-i',
+                             'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL=C',
+                             'depmod', '-a', release, capture_output=True, text=True)
+            print(dependency.stdout, end='')
+            print(dependency.stderr, end='', file=sys.stderr)
+            assert 'ERROR:' not in dependency.stderr, 'Target module dependency generation reported errors'
             dtb_report = dtb_patch.patch(dtb, target['original_dtb_sha256'])
             (root/'usr/local/sbin').mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT/'scripts/collect-network.sh', root/'usr/local/sbin/photonicat-diagnostics')
@@ -137,6 +144,8 @@ def main():
             run('losetup', '-d', loop)
         with image.open('rb') as stream:
             assert stream.read(16*1024*1024) == boot_region, 'Bootloader/partition table changed'
+        report['bootloader_and_partition_table_unchanged'] = True
+        (output_dir/'build.json').write_text(json.dumps(report, indent=2)+'\n')
         name = 'fnnas-photonicat1-1253-6.18.18-test.img.gz'
         final = output_dir / name
         with image.open('rb') as source, final.open('wb') as destination:
