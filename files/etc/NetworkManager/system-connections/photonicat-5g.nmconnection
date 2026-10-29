@@ -1,0 +1,18 @@
+[connection]
+id=Photonicat 5G
+uuid=e1d9b951-993a-419c-b02f-88b114f76103
+type=ethernet
+autoconnect=true
+autoconnect-priority=100
+
+[match]
+driver=cdc_ether;rndis_host;cdc_ncm;
+
+[ethernet]
+
+[ipv4]
+method=auto
+route-metric=100
+
+[ipv6]
+method=disabled

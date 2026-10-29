@@ -16,6 +16,11 @@ section 'Network interfaces and addresses'
 ip -br link
 ip -br addr
 ip route
+section 'Network sharing profiles'
+nmcli -f NAME,TYPE,DEVICE connection show --active 2>/dev/null || true
+nmcli -f GENERAL,IP4 device show pcatlan0 2>/dev/null || true
+iptables -S FORWARD 2>/dev/null || true
+iptables -t nat -S POSTROUTING 2>/dev/null || true
 section 'Physical network device state'
 for path in /sys/class/net/*; do
     [ -d "$path/device" ] || continue

@@ -3,7 +3,7 @@ name: Build Photonicat FnNAS
 on:
   push:
     branches: [main]
-    paths: ['scripts/**', 'tests/**', 'vendor/**', 'sources.lock.json', '.github/workflows/**']
+    paths: ['files/**', 'scripts/**', 'tests/**', 'vendor/**', 'sources.lock.json', '.github/workflows/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -40,7 +40,8 @@ jobs:
           python3 -m compileall -q scripts tests
           bash -n scripts/build-module.sh
           sh -n scripts/collect-network.sh
-          shellcheck scripts/build-module.sh scripts/collect-network.sh
+          sh -n files/etc/initramfs-tools/hooks/photonicat-net-names
+          shellcheck scripts/build-module.sh scripts/collect-network.sh files/etc/initramfs-tools/hooks/photonicat-net-names
           git diff --check
   module:
     needs: validate

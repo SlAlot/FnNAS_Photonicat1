@@ -18,6 +18,9 @@ import importlib.util
 spec = importlib.util.spec_from_file_location('dtb_patch', ROOT / 'scripts/patch-dtb.py')
 dtb_patch = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dtb_patch)
+router_spec = importlib.util.spec_from_file_location('install_router', ROOT / 'scripts/install-router.py')
+router = importlib.util.module_from_spec(router_spec)
+router_spec.loader.exec_module(router)
 
 def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
@@ -109,6 +112,7 @@ def main():
             print(dependency.stderr, end='', file=sys.stderr)
             assert 'ERROR:' not in dependency.stderr, 'Target module dependency generation reported errors'
             dtb_report = dtb_patch.patch(dtb, target['original_dtb_sha256'])
+            report['router'] = router.install(root)
             (root/'usr/local/sbin').mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT/'scripts/collect-network.sh', root/'usr/local/sbin/photonicat-diagnostics')
             (root/'usr/local/sbin/photonicat-diagnostics').chmod(0o755)
@@ -139,9 +143,18 @@ def main():
             run('unmkinitramfs', str(initrd), str(extracted))
             early = list(extracted.rglob('dwmac-rk.ko'))
             assert early and all(sha(path) == report['module_sha256'] for path in early), 'Stale or missing early-boot driver'
+            naming_rules = list(extracted.rglob('70-photonicat-net.rules'))
+            assert naming_rules and all(sha(path) == sha(ROOT/'files/etc/udev/rules.d/70-photonicat-net.rules')
+                                        for path in naming_rules), 'Missing early-boot LAN/WAN naming rules'
             report.update({'dtb': dtb_report, 'base_image_sha256': target['image']['sha256'],
                            'status': 'test_image_not_hardware_verified', 'board': 'photonicat',
                            'early_boot_driver_verified': True})
+            network_test = work / 'network-test'
+            network_test.mkdir()
+            run('unshare', '--mount', '--net', '--pid', '--fork', '--kill-child',
+                '/usr/bin/env', 'PCAT_NETWORK_SANDBOX=1', 'python3', str(ROOT/'tests/router-integration.py'),
+                '--sandbox', str(root), str(network_test))
+            report['router_integration'] = json.loads((network_test/'result.json').read_text())
             (root/'usr/lib/photonicat-adaptation/build.json').write_text(json.dumps(report, indent=2)+'\n')
             (output_dir/'build.json').write_text(json.dumps(report, indent=2)+'\n')
             run('sync')

@@ -1,0 +1,17 @@
+[connection]
+id=Photonicat LAN
+uuid=b3e40ad1-f9ef-42a3-894d-a1bdd6936101
+type=ethernet
+interface-name=pcatlan0
+autoconnect=true
+autoconnect-priority=100
+
+[ethernet]
+
+[ipv4]
+method=shared
+address1=192.168.17.1/24
+never-default=true
+
+[ipv6]
+method=disabled

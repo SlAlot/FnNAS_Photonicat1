@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+if [ "${1:-}" = prereqs ]; then
+    exit 0
+fi
+: "${DESTDIR:?initramfs destination is required}"
+mkdir -p "$DESTDIR/etc/udev/rules.d"
+cp -p /etc/udev/rules.d/70-photonicat-net.rules "$DESTDIR/etc/udev/rules.d/"

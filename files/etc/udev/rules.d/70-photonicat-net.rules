@@ -1,0 +1,3 @@
+# Bind roles to the RK3568 MAC controllers, not probe-order eth numbers.
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="fe2a0000.ethernet", NAME:="pcatlan0"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="fe010000.ethernet", NAME:="pcatwan0"

@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Install factory profiles offline; never run this against a live router."""
+from pathlib import Path
+import json
+import shutil
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def install(root):
+    root = Path(root).resolve()
+    assert root != Path('/') and (root / 'etc/os-release').is_file(), 'Expected a mounted image root'
+    for package in ('network-manager', 'dnsmasq-base', 'iptables'):
+        status = (root / 'var/lib/dpkg/status').read_text()
+        assert any(f'Package: {package}\n' in paragraph and 'Status: install ok installed' in paragraph
+                   for paragraph in status.split('\n\n')), f'Missing router dependency: {package}'
+    copied = []
+    for source in sorted((ROOT / 'files').rglob('*')):
+        if not source.is_file():
+            continue
+        relative = source.relative_to(ROOT / 'files')
+        target = root / relative
+        assert not target.exists() and not target.is_symlink(), f'Refusing to overwrite upstream settings: {relative}'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        mode = 0o600 if source.suffix == '.nmconnection' else 0o644
+        if 'initramfs-tools/hooks' in relative.as_posix():
+            mode = 0o755
+        target.chmod(mode)
+        copied.append(str(relative))
+    return {'lan': {'interface': 'pcatlan0', 'controller': 'fe2a0000.ethernet', 'address': '192.168.17.1/24',
+                    'dhcp': True, 'dns_forwarding': True, 'nat': 'NetworkManager shared'},
+            'wired_wan': {'interface': 'pcatwan0', 'controller': 'fe010000.ethernet', 'metric': 600},
+            'modem': {'drivers': ['cdc_ether', 'rndis_host', 'cdc_ncm'], 'metric': 100},
+            'installed_files': copied}
+
+
+if __name__ == '__main__':
+    print(json.dumps(install(sys.argv[1]), indent=2))
