@@ -49,7 +49,7 @@ sudo photonicat-diagnostics > photonicat-network.txt 2>&1
 流程包括：
 
 1. 核对上游镜像、内核包和 Linux 源文件摘要，来源变化时停止构建。
-2. 执行接口能力和设备树回归，原生 ARM64 编译网口模块，核对内核版本与符号 CRC。
+2. 执行接口能力和设备树回归，使用对应内核头文件在原生 ARM64 编译，核对内核标识和导入符号。当前飞牛内核未启用模块符号 CRC，仍需真机验证运行时兼容性。
 3. 仅在构建机的镜像 loop 设备中修改根分区、启动分区和 initramfs；核对原始模块与设备树，保留镜像内恢复副本。
 4. 检查启动区与分区表未改变，输出测试镜像、SHA-256 清单及对应模块源码。
 
@@ -65,4 +65,3 @@ python3 -m unittest discover -s tests -v
 感谢 [FnNAS](https://www.fnnas.com/)、[ophub/fnnas](https://github.com/ophub/fnnas)、[Linux](https://github.com/gregkh/linux) 和[光影猫官方](https://github.com/photonicat/rockchip_rk3568_linux_mainline)的贡献者。
 
 本仓库使用 [GPL-2.0](LICENSE)，保留上游补丁和组件原有版权与许可。飞牛系统及专有组件遵循各自条款；本项目为社区适配，不代表飞牛或光影猫官方发行。
-光影猫一代 Photonicat 1 / RK3568 飞牛 ARM 适配与自动构建，基于 ophub/fnnas。
