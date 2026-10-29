@@ -40,6 +40,7 @@ assert.equal(saved.ipv4Dhcp,false);assert.equal(saved.defaultIpv4Gateway,false);
 assert.equal(saved.ipv4Addr,lan.ipv4Addr);assert.deepEqual(saved.ipv4Dns,lan.ipv4Dns);assert.equal(saved.mtu,1492);
 assert.equal(lan.ipv4Dhcp,true);
 const wan = {...lan,ifName:'pcatwan0'};assert.equal(pcatLanSettings(wan),wan);
+assert.deepEqual(pcatBondCandidates([{name:'pcatlan0'},{name:'pcatwan0'},{name:'usb0'}]),[{name:'pcatwan0'},{name:'usb0'}]);
 const native = {cpu:{name:'RK3568'},mem:{total:4000},gpu:[]};
 globalThis.fetch=async()=>({ok:true,json:async()=>({gpu:[{vendor:'Arm',device:'Mali-G52'}]})});
 const info = await pcatHardwareInfo(native);assert.equal(info.gpu[0].device,'Mali-G52');assert.equal(info.cpu,native.cpu);assert.equal(info.mem,native.mem);

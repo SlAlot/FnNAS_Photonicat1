@@ -40,7 +40,12 @@ for path in /sys/class/net/*; do
     fi
 done
 section 'Network and power modules'
-lsmod | grep -Ei 'stmmac|dwmac|motorcomm|xpcs|phylink|pcat|photonicat' || true
+lsmod | grep -Ei 'stmmac|dwmac|motorcomm|xpcs|phylink|pcat|photonicat|ath10k|ath11k|mac80211|cfg80211|qrtr' || true
+section 'Wireless interfaces and regulatory domain'
+if command -v iw >/dev/null 2>&1; then
+    iw dev
+    iw reg get
+fi
 section 'MDIO devices'
 for path in /sys/bus/mdio_bus/devices/*; do
     [ -e "$path" ] || continue

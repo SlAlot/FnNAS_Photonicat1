@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+if [ "${1:-}" = prereqs ]; then
+    exit 0
+fi
+# Rootfs and early boot must contain the same board-specific driver.
+/usr/local/sbin/photonicat-kernel-adapt apply "${version:?kernel version is required}"

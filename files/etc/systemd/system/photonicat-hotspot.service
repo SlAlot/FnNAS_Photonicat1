@@ -1,0 +1,13 @@
+[Unit]
+Description=Photonicat hotspot administration
+After=NetworkManager.service
+ConditionPathExists=/var/apps/photonicat-hotspot/target/server.py
+
+[Service]
+User=pcat-hotspot
+Group=www-data
+RuntimeDirectory=photonicat-hotspot
+RuntimeDirectoryMode=0750
+ExecStart=/usr/bin/python3 /var/apps/photonicat-hotspot/target/server.py
+Restart=on-failure
+RestartSec=3

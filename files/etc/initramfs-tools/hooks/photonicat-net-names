@@ -7,3 +7,6 @@ fi
 mkdir -p "$DESTDIR/etc/udev/rules.d"
 cp -p /etc/udev/rules.d/70-photonicat-net.rules "$DESTDIR/etc/udev/rules.d/"
 cp -p /etc/udev/rules.d/99-photonicat-modem-net.rules "$DESTDIR/etc/udev/rules.d/"
+mkdir -p "$DESTDIR/lib/firmware"
+cp -L /lib/firmware/regulatory.db "$DESTDIR/lib/firmware/regulatory.db"
+cp -L /lib/firmware/regulatory.db.p7s "$DESTDIR/lib/firmware/regulatory.db.p7s"

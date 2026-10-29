@@ -1,0 +1,12 @@
+[Unit]
+Description=Verify Photonicat board drivers after package updates
+Before=NetworkManager.service photonicat-router.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/photonicat-kernel-adapt apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

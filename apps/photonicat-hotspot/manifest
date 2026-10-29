@@ -1,0 +1,15 @@
+appname=photonicat-hotspot
+version=0.1.1
+display_name=光影猫热点
+desc=管理光影猫无线热点，通过 5G 分享网络。
+source=thirdparty
+platform=arm
+maintainer=SlAlot
+maintainer_url=https://github.com/SlAlot/FnNAS_Photonicat1
+os_min_version=1.1.8
+install_type=root
+desktop_uidir=ui
+desktop_applaunchname=photonicat-hotspot.main
+ctl_stop=true
+checkport=false
+disable_authorization_path=true

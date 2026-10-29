@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+case "$1" in
+    start)
+        systemctl start photonicat-hotspot.service
+        ;;
+    stop) systemctl stop photonicat-hotspot.service ;;
+    status) systemctl is-active --quiet photonicat-hotspot.service || exit 3 ;;
+    *) exit 1 ;;
+esac

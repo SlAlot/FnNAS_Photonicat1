@@ -100,6 +100,7 @@ def inside():
         for name, peer, namespace, gateway in (
                 ('pcatlan0', 'lanpeer', 'client', None),
                 ('pcatwan0', 'wanpeer', 'wired', '192.168.66.1'),
+                ('pcataptest', 'appeer', 'apclient', None),
                 ('pcat5gtest', 'modempeer', 'mobile', '192.168.100.1')):
             run('ip', 'netns', 'add', namespace)
             run('ip', 'link', 'add', name, 'type', 'veth', 'peer', 'name', peer)
@@ -173,6 +174,14 @@ def inside():
         changed = json.loads(output('ip', 'netns', 'exec', 'client', 'python3', '/tmp/router-integration.py', '--dhcp', 'lanpeer', '192.168.27.1'))
         wait_for('DHCP/NAT follow changed LAN subnet', lambda: assert_path('mobile', '192.168.100.', '192.168.27.1'))
         print('PASS: LAN edit and subnet change retain DHCP, DNS and NAT', flush=True)
+        run('nmcli', 'device', 'set', 'pcataptest', 'managed', 'yes')
+        run('nmcli', 'connection', 'add', 'type', 'ethernet', 'ifname', 'pcataptest', 'con-name', 'AP-sharing-test',
+            'ipv4.method', 'shared', 'ipv4.addresses', '192.168.18.1/24', 'ipv4.never-default', 'yes', 'ipv6.method', 'disabled')
+        run('nmcli', '--wait', '15', 'connection', 'up', 'AP-sharing-test')
+        ap_lease = json.loads(output('ip', 'netns', 'exec', 'apclient', 'python3', '/tmp/router-integration.py', '--dhcp', 'appeer', '192.168.18.1'))
+        ap_probe = json.loads(output('ip', 'netns', 'exec', 'apclient', 'python3', '/tmp/router-integration.py', '--probe', '192.168.18.1'))
+        assert ap_probe['uplink'] == 'mobile' and ap_probe['source'].startswith('192.168.100.'), ap_probe
+        print('PASS: AP subnet DHCP, DNS and NAT coexist with protected LAN and Docker DROP policy', flush=True)
         # Exercise the vendor's real recovery-enabled web server. Our UI must
         # survive its extraction step without changing a native web resource.
         native = Path('/usr/trim/www/assets/Setting-CbdHMm55.js')
@@ -202,7 +211,8 @@ def inside():
                   'checks': ['offline_lan_dhcp_dns_options', '5g_priority', 'dns_forwarding', 'nat',
                              'docker_forward_drop_policy', 'wired_fallback', '5g_recovery',
                              'nas_host_dns_and_http', 'lan_manual_save', 'lan_subnet_change',
-                             'native_web_recovery_and_adapter'], 'changed_lease': changed}))
+                             'native_web_recovery_and_adapter', 'ap_subnet_dhcp_dns_nat'],
+                  'changed_lease': changed, 'ap_lease': ap_lease}))
     finally:
         for command in (('ip', '-br', 'addr'), ('ip', 'route'), ('iptables', '-S'), ('iptables', '-t', 'nat', '-S')):
             subprocess.run(command, check=False)

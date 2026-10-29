@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Patch only a loop-mounted, checksum-pinned FnNAS image on a build runner."""
 import gzip
+import fnmatch
 import hashlib
 import json
 import os
@@ -24,6 +25,12 @@ router_spec.loader.exec_module(router)
 editor_spec = importlib.util.spec_from_file_location('network_editor', ROOT / 'scripts/patch-network-editor.py')
 editor = importlib.util.module_from_spec(editor_spec)
 editor_spec.loader.exec_module(editor)
+hotspot_spec = importlib.util.spec_from_file_location('hotspot_app', ROOT / 'scripts/prepare-hotspot.py')
+hotspot = importlib.util.module_from_spec(hotspot_spec)
+hotspot_spec.loader.exec_module(hotspot)
+bundle_spec = importlib.util.spec_from_file_location('kernel_bundles', ROOT / 'scripts/install-kernel-bundles.py')
+bundles = importlib.util.module_from_spec(bundle_spec)
+bundle_spec.loader.exec_module(bundles)
 
 def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
@@ -95,6 +102,28 @@ def main():
             shutil.copy2(installed, backup/'dwmac-rk.ko')
             shutil.copy2(dtb, backup/dtb.name)
             shutil.copy2(module, installed)
+            wireless = module.parent / 'wireless'
+            wireless_report = json.loads((wireless / 'build.json').read_text())
+            wireless_target = root / f'usr/lib/modules/{release}/updates/photonicat'
+            wireless_target.mkdir(parents=True)
+            for item in wireless_report['modules']:
+                source = wireless / item['name']
+                assert sha(source) == item['sha256'], 'Wireless module hash differs from verification report'
+                shutil.copy2(source, wireless_target / source.name)
+            # Firmware supplied by the pinned base image, including SDIO and
+            # board-specific data, is required rather than guessed at boot.
+            for name in ('ath10k/QCA9377/hw1.0/firmware-sdio-5.bin',
+                         'ath10k/QCA9377/hw1.0/board-2.bin',
+                         'ath11k/WCN6855/hw2.0/amss.bin', 'ath11k/WCN6855/hw2.0/board-2.bin'):
+                assert (root / 'usr/lib/firmware' / name).is_file(), f'Missing wireless firmware: {name}'
+            report['wireless'] = wireless_report
+            iw_package = module.parent / 'iw.deb'
+            iw_pin = json.loads((ROOT / 'wireless.lock.json').read_text())['iw_package']
+            assert sha(iw_package) == iw_pin['sha256'], 'Wireless utility package differs from pinned input'
+            shutil.copy2(iw_package, backup / 'iw.deb')
+            run('chroot', str(root), 'dpkg', '-i', '/usr/lib/photonicat-adaptation/original/iw.deb')
+            run('chroot', str(root), 'update-alternatives', '--set', 'regulatory.db',
+                '/lib/firmware/regulatory.db-upstream')
             # The base image ships the optional trim/alternatives link before
             # creating its target directory. Keep this extension point intact.
             optional_link = root / f'usr/lib/modules/{release}/updates/trim/alternatives'
@@ -114,8 +143,18 @@ def main():
             print(dependency.stdout, end='')
             print(dependency.stderr, end='', file=sys.stderr)
             assert 'ERROR:' not in dependency.stderr, 'Target module dependency generation reported errors'
+            for driver, identifier in (
+                    ('ath10k_sdio', 'sdio:c00v0271d0701'),
+                    ('ath11k_pci', 'pci:v000017CBd00001103sv000011ADsd0000A80Dbc02sc80i00')):
+                aliases = run('chroot', str(root), 'modinfo', '-k', release, '-F', 'alias', driver,
+                              capture_output=True, text=True).stdout.splitlines()
+                assert any(fnmatch.fnmatchcase(identifier.upper(), alias.upper()) for alias in aliases), driver
+                run('chroot', str(root), 'modprobe', '-S', release, '--show-depends', driver,
+                    capture_output=True, text=True)
             dtb_report = dtb_patch.patch(dtb, target['original_dtb_sha256'])
+            bundles.install(root, module_dir)
             report['router'] = router.install(root)
+            hotspot.prepare(root / 'usr/local/share/photonicat-hotspot')
             report['router']['editor'] = editor.patch(root)
             (root/'usr/local/sbin').mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT/'scripts/collect-network.sh', root/'usr/local/sbin/photonicat-diagnostics')
@@ -139,7 +178,7 @@ def main():
                     content += '\n' + name + '\n'
             module_list.parent.mkdir(parents=True, exist_ok=True)
             module_list.write_text(content)
-            run('chroot', str(root), '/usr/bin/env', '-i', 'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'HOME=/root', 'LC_ALL=C',
+            run('chroot', str(root), '/usr/bin/env', '-i', 'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'HOME=/root', 'LC_ALL=C', 'PCAT_IMAGE_BUILD=1',
                 'mkinitramfs', '-o', f'/boot/initrd.img-{release}', release)
             run('mkimage', '-A', arch, '-O', 'linux', '-T', 'ramdisk', '-C', 'none', '-n', 'uInitrd', '-d', str(initrd), str(uinitrd))
             # Verify the early-boot copy too, so the old module cannot shadow the fixed rootfs module.
@@ -153,6 +192,10 @@ def main():
             modem_rules = list(extracted.rglob('99-photonicat-modem-net.rules'))
             assert modem_rules and all(sha(path) == sha(ROOT/'files/etc/udev/rules.d/99-photonicat-modem-net.rules')
                                        for path in modem_rules), 'Missing early-boot modem mode rules'
+            for name in ('regulatory.db', 'regulatory.db.p7s'):
+                early_database = list(extracted.rglob(name))
+                expected = sha(root / 'usr/lib/firmware' / (name + '-upstream'))
+                assert early_database and all(sha(path) == expected for path in early_database), 'Early regulatory database/signature mismatch'
             report.update({'dtb': dtb_report, 'base_image_sha256': target['image']['sha256'],
                            'status': 'test_image_not_hardware_verified', 'board': 'photonicat',
                            'early_boot_driver_verified': True})
@@ -162,6 +205,13 @@ def main():
                 '/usr/bin/env', 'PCAT_NETWORK_SANDBOX=1', 'python3', str(ROOT/'tests/router-integration.py'),
                 '--sandbox', str(root), str(network_test))
             report['router_integration'] = json.loads((network_test/'result.json').read_text())
+            for pin in json.loads((ROOT / 'ota-kernels.lock.json').read_text())['kernels']:
+                ota_test = work / ('ota-test-' + pin['release'])
+                ota_test.mkdir()
+                run('unshare', '--mount', '--net', '--pid', '--uts', '--ipc', '--fork', '--kill-child',
+                    '/usr/bin/env', 'PCAT_OTA_SANDBOX=1', 'python3', str(ROOT/'tests/kernel-ota-integration.py'),
+                    '--sandbox', str(root), str(ota_test), str(module_dir/'ota-inputs'/ (pin['release'] + '.deb')), pin['release'])
+            report['official_kernel_ota_hooks_verified'] = True
             (root/'usr/lib/photonicat-adaptation/build.json').write_text(json.dumps(report, indent=2)+'\n')
             (output_dir/'build.json').write_text(json.dumps(report, indent=2)+'\n')
             run('sync')

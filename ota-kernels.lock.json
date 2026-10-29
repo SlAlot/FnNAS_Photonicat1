@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "kernels": [
+    {
+      "release": "6.18.18.c1145-trim",
+      "vermagic": "6.18.18.c1145-trim SMP mod_unload aarch64",
+      "vmlinuz_sha256": "ee2cdd80c37271cda460e4006d3e56368369c39e4dd396631e998b95a9dc74ac",
+      "original_dtb_sha256": "2c2c0d2864383a862ea0631bd08b3ff559008f61d5c027661d45a9716a3d54f9",
+      "packages": {
+        "image": {
+          "url": "https://download.liveupdate.fnnas.com/arm/kernel/linux-image-6.18.18.c1145-trim_6.18.18.c1145-trim-1145_arm64-rk35xx.deb",
+          "sha256": "a5b46d3773f1f7fa5ae69d8f7feb90e50c4366896442983979b1d533d33265d8"
+        },
+        "headers": {
+          "url": "https://download.liveupdate.fnnas.com/arm/kernel/linux-headers-6.18.18.c1145-trim_6.18.18.c1145-trim-1145_arm64-rk35xx.deb",
+          "sha256": "6b8e3cdfff0a1659cca8c425b76fb0438475e77f1ea93d9ea9f3c12d7be69a4c"
+        }
+      }
+    }
+  ]
+}

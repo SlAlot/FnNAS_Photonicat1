@@ -14,3 +14,5 @@ cp work/driver/*.c work/driver/*.h work/driver/*.patch work/driver/Makefile dist
 cp LICENSE vendor/UPSTREAM.md vendor/rockchip-sgmii.patch dist/module/source/
 cp sources.lock.json dist/module/
 sha256sum dist/module/dwmac-rk.ko
+bash scripts/build-wireless.sh
+bash scripts/build-ota-modules.sh

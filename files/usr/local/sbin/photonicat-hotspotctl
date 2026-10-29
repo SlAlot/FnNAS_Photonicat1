@@ -1,0 +1,219 @@
+#!/usr/bin/python3
+"""Privileged, Wi-Fi-only controller. Requests are JSON on stdin, never shell code."""
+import configparser
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+import uuid
+
+PROFILES = Path('/etc/NetworkManager/system-connections')
+ROLES = {'ath10k_sdio': ('board', '板载 QCA9377', '192.168.18.1/24'),
+         'ath11k_pci': ('external', '外接 QCNFA765', '192.168.19.1/24')}
+
+
+def run(*arguments, check=True):
+    result = subprocess.run(arguments, capture_output=True, text=True, timeout=30)
+    if check and result.returncode:
+        raise ValueError(result.stderr.strip()[:500] or '网络操作失败')
+    return result
+
+
+def parser(path):
+    config = configparser.ConfigParser(interpolation=None)
+    if path.exists():
+        config.read(path, encoding='utf-8')
+    return config
+
+
+def unescape(value):
+    return re.sub(r'\\([snt\\r])', lambda m: {'s': ' ', 'n': '\n', 't': '\t', 'r': '\r', '\\': '\\'}[m[1]], value)
+
+
+def escape(value):
+    return value.replace('\\', '\\\\').replace(' ', '\\s')
+
+
+def decode_ssid(value):
+    if re.fullmatch(r'(?:\d+;)+', value):
+        return bytes(int(v) for v in value.split(';') if v).decode('utf-8')
+    return unescape(value)
+
+
+def profile(role):
+    assert role in {'board', 'external'}
+    return PROFILES / ('photonicat-ap-' + role + '.nmconnection')
+
+
+def devices():
+    result = []
+    for phy in sorted(Path('/sys/class/ieee80211').glob('*')):
+        driver = (phy / 'device/driver').resolve().name
+        if driver not in ROLES:
+            continue
+        nets = list((phy / 'device/net').glob('*'))
+        if len(nets) != 1:
+            continue
+        interface = nets[0].name
+        if not re.fullmatch(r'[A-Za-z0-9_.-]{1,15}', interface):
+            continue
+        role, title, address = ROLES[driver]
+        link = json.loads(run('ip', '-j', 'link', 'show', 'dev', interface).stdout)[0]
+        mac = link.get('permaddr', link['address'])
+        assert re.fullmatch(r'([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}', mac)
+        info = run('/usr/sbin/iw', 'phy', phy.name, 'info').stdout
+        channels = {'bg': [], 'a': []}
+        for line in info.splitlines():
+            match = re.search(r'\* (\d+) MHz \[(\d+)\]', line)
+            if not match or any(word in line for word in ('disabled', 'no IR', 'radar detection')):
+                continue
+            frequency, channel = map(int, match.groups())
+            band = 'bg' if 2400 <= frequency < 2500 else 'a' if 5000 <= frequency < 5900 else None
+            if band:
+                channels[band].append(channel)
+        saved = parser(profile(role))
+        data = saved['wifi'] if saved.has_section('wifi') else {}
+        enabled = saved.getboolean('connection', 'autoconnect', fallback=False)
+        current = run('nmcli', '-g', 'GENERAL.STATE', 'device', 'show', interface).stdout.strip()
+        mode = run('/usr/sbin/iw', 'dev', interface, 'info').stdout
+        result.append({'id': role, 'title': title, 'interface': interface, 'mac': mac,
+                       'channels': channels, 'supports_ap': bool(re.search(r'^\s+\* AP\s*$', info, re.M)),
+                       'ssid': decode_ssid(data.get('ssid', '')), 'band': data.get('band', 'bg'),
+                       'channel': int(data.get('channel', '1')), 'enabled': enabled,
+                       'active': bool(re.search(r'^\s*type AP\s*$', mode, re.M)) and current.startswith('100'),
+                       'password_set': saved.has_option('wifi-security', 'psk'),
+                       'gateway': str(ipaddress.ip_interface(address).ip)})
+    return result
+
+
+def apply(request):
+    card = next((card for card in devices() if card['id'] == request.get('id')), None)
+    if card is None:
+        raise ValueError('找不到此无线网卡')
+    enabled = request.get('enabled')
+    if type(enabled) is not bool:
+        raise ValueError('热点开关无效')
+    path = profile(card['id'])
+    old = path.read_bytes() if path.exists() else None
+    identifier = str(uuid.uuid5(uuid.NAMESPACE_DNS, 'photonicat.ap.' + card['id']))
+    if not enabled:
+        if old:
+            config = parser(path)
+            config.set('connection', 'autoconnect', 'false')
+            with path.open('w', encoding='utf-8') as output:
+                config.write(output)
+            path.chmod(0o600)
+            run('nmcli', 'connection', 'load', str(path))
+            run('nmcli', 'connection', 'down', 'uuid', identifier, check=False)
+        return
+    if not card['supports_ap']:
+        raise ValueError('当前驱动不支持 AP 模式')
+    ssid, password, band = request.get('ssid', ''), request.get('password', ''), request.get('band')
+    if not isinstance(ssid, str) or not 1 <= len(ssid.encode('utf-8')) <= 32 or any(ord(c) < 32 for c in ssid):
+        raise ValueError('热点名称需为 1～32 字节，且不能包含控制字符')
+    if not isinstance(password, str):
+        raise ValueError('密码格式无效')
+    if not password and old:
+        password = unescape(parser(path).get('wifi-security', 'psk', fallback=''))
+    if not 8 <= len(password) <= 63 or any(ord(c) < 32 or ord(c) > 126 for c in password):
+        raise ValueError('密码需为 8～63 位英文字母、数字或符号')
+    channel = request.get('channel')
+    if band not in card['channels'] or type(channel) is not int or channel not in card['channels'][band]:
+        raise ValueError('此网卡当前不允许在所选信道开启热点')
+    subnet = ROLES['ath10k_sdio' if card['id'] == 'board' else 'ath11k_pci'][2]
+    network = ipaddress.ip_interface(subnet).network
+    for device in json.loads(run('ip', '-j', '-4', 'addr').stdout):
+        if device['ifname'] == card['interface']:
+            continue
+        for address in device.get('addr_info', []):
+            other = ipaddress.ip_interface(f"{address['local']}/{address['prefixlen']}").network
+            if network.overlaps(other):
+                raise ValueError('热点地址与现有网络冲突，请先处理地址冲突')
+    contents = (f'[connection]\nid=Photonicat AP {card["id"]}\nuuid={identifier}\ntype=wifi\n'
+                'autoconnect=false\nautoconnect-priority=80\n\n'
+                f'[wifi]\nssid={";".join(str(byte) for byte in ssid.encode())};\nmode=ap\nband={band}\nchannel={channel}\nmac-address={card["mac"]}\ncloned-mac-address=permanent\npowersave=2\n\n'
+                '[wifi-security]\nkey-mgmt=wpa-psk\nproto=rsn;\npairwise=ccmp;\ngroup=ccmp;\n'
+                f'psk={escape(password)}\n\n[ipv4]\nmethod=shared\naddress1={subnet}\nnever-default=true\n'
+                '[ipv6]\nmethod=disabled\n')
+    temporary = path.with_suffix('.tmp')
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
+        output.write(contents)
+    os.replace(temporary, path)
+    try:
+        run('nmcli', 'radio', 'wifi', 'on')
+        if card['active']:
+            run('nmcli', 'connection', 'down', 'uuid', identifier)
+            time.sleep(0.5)
+        run('nmcli', 'connection', 'load', str(path))
+        run('nmcli', '--wait', '20', 'connection', 'up', 'uuid', identifier, 'ifname', card['interface'])
+        # Loading an autoconnect-enabled profile and immediately activating it
+        # races NM's own activation, restarting the AP in the middle of setup.
+        run('nmcli', 'connection', 'modify', 'uuid', identifier, 'connection.autoconnect', 'yes')
+    except Exception:
+        if old is None:
+            run('nmcli', 'connection', 'delete', 'uuid', identifier, check=False)
+            path.unlink(missing_ok=True)
+        else:
+            path.write_bytes(old)
+            path.chmod(0o600)
+            run('nmcli', 'connection', 'load', str(path), check=False)
+            if parser(path).getboolean('connection', 'autoconnect', fallback=False):
+                run('nmcli', '--wait', '15', 'connection', 'up', 'uuid', identifier, check=False)
+        raise
+
+
+def main():
+    if os.geteuid() != 0 or len(sys.argv) != 1:
+        raise SystemExit('Root and a JSON request on stdin are required')
+    try:
+        request = json.loads(sys.stdin.buffer.read(8193))
+        if not isinstance(request, dict):
+            raise ValueError('请求无效')
+        operation = request.get('operation', 'status')
+        if operation == 'authenticate':
+            import crypt
+            import grp
+            import hmac
+            import pwd
+            import spwd
+            username, password = request.get('username'), request.get('password')
+            if not isinstance(username, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,32}', username):
+                raise ValueError('管理员账号或密码错误')
+            if not isinstance(password, str) or not 1 <= len(password) <= 256:
+                raise ValueError('管理员账号或密码错误')
+            try:
+                account = pwd.getpwnam(username)
+                groups = os.getgrouplist(username, account.pw_gid)
+                allowed = [group.gr_gid for group in grp.getgrall() if group.gr_name in ('sudo', 'Administrators')]
+                administrator = account.pw_uid == 0 or bool(set(groups) & set(allowed))
+                hashed = spwd.getspnam(username).sp_pwdp
+                valid = administrator and hashed and not hashed.startswith(('!', '*')) and hmac.compare_digest(crypt.crypt(password, hashed) or '', hashed)
+            except KeyError:
+                valid = False
+            if not valid:
+                raise ValueError('管理员账号或密码错误')
+            print(json.dumps({'ok': True, 'username': username}))
+            return
+        if operation == 'apply':
+            import fcntl
+            with open('/run/photonicat-hotspot-apply.lock', 'w') as lock:
+                try:
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise ValueError('另一项热点设置正在应用，请稍后重试')
+                apply(request)
+        elif operation != 'status':
+            raise ValueError('不支持的操作')
+        print(json.dumps({'ok': True, 'devices': devices()}, ensure_ascii=False))
+    except (ValueError, OSError, AssertionError, subprocess.SubprocessError) as error:
+        print(json.dumps({'ok': False, 'error': str(error)}, ensure_ascii=False))
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    main()

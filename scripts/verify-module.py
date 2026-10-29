@@ -5,11 +5,12 @@ from pathlib import Path
 import subprocess
 import sys
 
-module, headers, report = map(Path, sys.argv[1:])
+module, headers, report = map(Path, sys.argv[1:4])
+expected_magic = sys.argv[4] if len(sys.argv) > 4 else '6.18.18-trim SMP preempt mod_unload aarch64'
 ROOT = Path(__file__).resolve().parents[1]
 lock = json.loads((ROOT / 'sources.lock.json').read_text())
 vermagic = subprocess.check_output(['modinfo', '-F', 'vermagic', str(module)], text=True).strip()
-assert vermagic == '6.18.18-trim SMP preempt mod_unload aarch64', vermagic
+assert vermagic == expected_magic, vermagic
 assert subprocess.check_output(['modinfo', '-F', 'version', str(module)], text=True).strip() == '0.1.0-photonicat-test'
 known = {}
 for line in (headers / 'Module.symvers').read_text().splitlines():
@@ -38,7 +39,7 @@ if has_crcs:
 else:
     sections = subprocess.check_output(['readelf', '--section-headers', '--wide', str(module)], text=True)
     assert '__versions' not in sections, 'Module CRC mode differs from the target kernel'
-result = {'kernel_release': lock['target']['kernel_release'], 'vermagic': vermagic,
+result = {'kernel_release': expected_magic.split()[0], 'vermagic': vermagic,
           'module_sha256': hashlib.sha256(module.read_bytes()).hexdigest(),
           'validated_imports': len(imports), 'modversions': has_crcs,
           'abi_check': 'symbol_crcs' if has_crcs else 'export_names_and_vermagic_only',

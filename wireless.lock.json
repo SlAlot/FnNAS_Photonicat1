@@ -1,0 +1,846 @@
+{
+  "linux_ref": "v6.18.18",
+  "linux_commit": "3318f10fa28986dc5767444de585e00369c4ace3",
+  "files": [
+    {
+      "path": "ath/Kconfig",
+      "source": "drivers/net/wireless/ath/Kconfig",
+      "blob": "910c10028b14aa6107e1a64c9625fb179a156f40"
+    },
+    {
+      "path": "ath/Makefile",
+      "source": "drivers/net/wireless/ath/Makefile",
+      "blob": "8d6e6e218d24c24104dfaaffe5450b26c71318ba"
+    },
+    {
+      "path": "ath/ath.h",
+      "source": "drivers/net/wireless/ath/ath.h",
+      "blob": "34654f710d8a1e63f65a47d4602e2035262a4d9e"
+    },
+    {
+      "path": "ath/ath10k/Kconfig",
+      "source": "drivers/net/wireless/ath/ath10k/Kconfig",
+      "blob": "876aed76583318724e4dab0b537d5c93c77460c6"
+    },
+    {
+      "path": "ath/ath10k/Makefile",
+      "source": "drivers/net/wireless/ath/ath10k/Makefile",
+      "blob": "02bf9b629038d328a632e848c21d25d32d55531f"
+    },
+    {
+      "path": "ath/ath10k/ahb.c",
+      "source": "drivers/net/wireless/ath/ath10k/ahb.c",
+      "blob": "eb8b35b6224dbf2540013a4a066646ecc9a3db75"
+    },
+    {
+      "path": "ath/ath10k/ahb.h",
+      "source": "drivers/net/wireless/ath/ath10k/ahb.h",
+      "blob": "cee11a3ae2a5487680e045ae31287566f52e23ad"
+    },
+    {
+      "path": "ath/ath10k/bmi.c",
+      "source": "drivers/net/wireless/ath/ath10k/bmi.c",
+      "blob": "52118867ecde5c71b36361e3393d7579116d8be9"
+    },
+    {
+      "path": "ath/ath10k/bmi.h",
+      "source": "drivers/net/wireless/ath/ath10k/bmi.h",
+      "blob": "0685c0d2d4ea035c11932facb91bb81a91ac58fb"
+    },
+    {
+      "path": "ath/ath10k/ce.c",
+      "source": "drivers/net/wireless/ath/ath10k/ce.c",
+      "blob": "82f120ee1c66d5ac27a03e5fcb5134365eb428ed"
+    },
+    {
+      "path": "ath/ath10k/ce.h",
+      "source": "drivers/net/wireless/ath/ath10k/ce.h",
+      "blob": "27367bd64e957790fff8af63ae98cc447bdda194"
+    },
+    {
+      "path": "ath/ath10k/core.c",
+      "source": "drivers/net/wireless/ath/ath10k/core.c",
+      "blob": "9ae3595fb6986de63c6b21b8d7549e16f0c922d5"
+    },
+    {
+      "path": "ath/ath10k/core.h",
+      "source": "drivers/net/wireless/ath/ath10k/core.h",
+      "blob": "859176fcb5a29d5dbdce8a38974938898a346513"
+    },
+    {
+      "path": "ath/ath10k/coredump.c",
+      "source": "drivers/net/wireless/ath/ath10k/coredump.c",
+      "blob": "50d0c4213ecfdce975638c66bcdebe35b6ce9d3f"
+    },
+    {
+      "path": "ath/ath10k/coredump.h",
+      "source": "drivers/net/wireless/ath/ath10k/coredump.h",
+      "blob": "8d274e0f374b6596544d169a02b84337bca8d137"
+    },
+    {
+      "path": "ath/ath10k/debug.c",
+      "source": "drivers/net/wireless/ath/ath10k/debug.c",
+      "blob": "b7520220465a838ba700bb10bee2325ccc324d20"
+    },
+    {
+      "path": "ath/ath10k/debug.h",
+      "source": "drivers/net/wireless/ath/ath10k/debug.h",
+      "blob": "0af787f49b338b18b244613d65adcf0a58461cdf"
+    },
+    {
+      "path": "ath/ath10k/debugfs_sta.c",
+      "source": "drivers/net/wireless/ath/ath10k/debugfs_sta.c",
+      "blob": "b9fb192e0b48456cc21b281fec47ce607913ab02"
+    },
+    {
+      "path": "ath/ath10k/hif.h",
+      "source": "drivers/net/wireless/ath/ath10k/hif.h",
+      "blob": "9e45fd9073a67f2090399cbb476034b1a4c804d7"
+    },
+    {
+      "path": "ath/ath10k/htc.c",
+      "source": "drivers/net/wireless/ath/ath10k/htc.c",
+      "blob": "ce9b248c12dc6c0c90a9a7e081e428d439465ede"
+    },
+    {
+      "path": "ath/ath10k/htc.h",
+      "source": "drivers/net/wireless/ath/ath10k/htc.h",
+      "blob": "7ff665020015d4c495a5e2f5f13dc41a90d4b6db"
+    },
+    {
+      "path": "ath/ath10k/htt.c",
+      "source": "drivers/net/wireless/ath/ath10k/htt.c",
+      "blob": "dbaf262cd7c1eaf254dd14eca51532d7b662f8a1"
+    },
+    {
+      "path": "ath/ath10k/htt.h",
+      "source": "drivers/net/wireless/ath/ath10k/htt.h",
+      "blob": "603f6de62b0a02f4f0d1ac64af46b635b001c2ee"
+    },
+    {
+      "path": "ath/ath10k/htt_rx.c",
+      "source": "drivers/net/wireless/ath/ath10k/htt_rx.c",
+      "blob": "d7e429041065ad21ed699a7e75809817ba719830"
+    },
+    {
+      "path": "ath/ath10k/htt_tx.c",
+      "source": "drivers/net/wireless/ath/ath10k/htt_tx.c",
+      "blob": "d6f1d85ba8713d4343605082d91b96ea0df900e7"
+    },
+    {
+      "path": "ath/ath10k/hw.c",
+      "source": "drivers/net/wireless/ath/ath10k/hw.c",
+      "blob": "59b6cebfdd8f387c957d954106f564e58c6d7d55"
+    },
+    {
+      "path": "ath/ath10k/hw.h",
+      "source": "drivers/net/wireless/ath/ath10k/hw.h",
+      "blob": "da71dce9babf7f6b7e587ebb6e035945ab35d2a5"
+    },
+    {
+      "path": "ath/ath10k/leds.c",
+      "source": "drivers/net/wireless/ath/ath10k/leds.c",
+      "blob": "3a6c8111e7c6388641404ed50534422a2be33ed3"
+    },
+    {
+      "path": "ath/ath10k/leds.h",
+      "source": "drivers/net/wireless/ath/ath10k/leds.h",
+      "blob": "56325b0875e5ca4ae51f923b96478a90edd62c29"
+    },
+    {
+      "path": "ath/ath10k/mac.c",
+      "source": "drivers/net/wireless/ath/ath10k/mac.c",
+      "blob": "da6f7957a0ae7bdc223aa48f0cf36ad9b700b342"
+    },
+    {
+      "path": "ath/ath10k/mac.h",
+      "source": "drivers/net/wireless/ath/ath10k/mac.h",
+      "blob": "98d83a26ea602d5d991c9627d54cbf5ecf1740b4"
+    },
+    {
+      "path": "ath/ath10k/p2p.c",
+      "source": "drivers/net/wireless/ath/ath10k/p2p.c",
+      "blob": "517b30f56b724ddf6bc384c88b0fd241ce9c84dc"
+    },
+    {
+      "path": "ath/ath10k/p2p.h",
+      "source": "drivers/net/wireless/ath/ath10k/p2p.h",
+      "blob": "7d7f44809fbb1f92f45426bce92d666031d5d9bd"
+    },
+    {
+      "path": "ath/ath10k/pci.c",
+      "source": "drivers/net/wireless/ath/ath10k/pci.c",
+      "blob": "97b49bf4ad80916dd139acd5f5744922317191aa"
+    },
+    {
+      "path": "ath/ath10k/pci.h",
+      "source": "drivers/net/wireless/ath/ath10k/pci.h",
+      "blob": "4c3f536f2ea1a95a78a0703d1f82d37d52f4b6d4"
+    },
+    {
+      "path": "ath/ath10k/qmi.c",
+      "source": "drivers/net/wireless/ath/ath10k/qmi.c",
+      "blob": "f1f33af0170a08744ae658130e29781c0e5bedfb"
+    },
+    {
+      "path": "ath/ath10k/qmi.h",
+      "source": "drivers/net/wireless/ath/ath10k/qmi.h",
+      "blob": "0816eb4e4a18a3f3641eb64d11a4db2a36ad7616"
+    },
+    {
+      "path": "ath/ath10k/qmi_wlfw_v01.c",
+      "source": "drivers/net/wireless/ath/ath10k/qmi_wlfw_v01.c",
+      "blob": "0e85c75d2278360a19e43fb69f690bb2dfeb6d86"
+    },
+    {
+      "path": "ath/ath10k/qmi_wlfw_v01.h",
+      "source": "drivers/net/wireless/ath/ath10k/qmi_wlfw_v01.h",
+      "blob": "9f311f3bc9e7f9eb20bfc83fa0f38a91a2c3a220"
+    },
+    {
+      "path": "ath/ath10k/rx_desc.h",
+      "source": "drivers/net/wireless/ath/ath10k/rx_desc.h",
+      "blob": "564293df1e9acfd0aa09fcc5ec09da99830206ef"
+    },
+    {
+      "path": "ath/ath10k/sdio.c",
+      "source": "drivers/net/wireless/ath/ath10k/sdio.c",
+      "blob": "00d0556dafefdb42cfde1bae0f3af4979bd08a6e"
+    },
+    {
+      "path": "ath/ath10k/sdio.h",
+      "source": "drivers/net/wireless/ath/ath10k/sdio.h",
+      "blob": "b6ac927628b199e0d9dce0deaed3ef0df40e762a"
+    },
+    {
+      "path": "ath/ath10k/snoc.c",
+      "source": "drivers/net/wireless/ath/ath10k/snoc.c",
+      "blob": "b3f6424c17d3668664806e026f57ec1ea356fae3"
+    },
+    {
+      "path": "ath/ath10k/snoc.h",
+      "source": "drivers/net/wireless/ath/ath10k/snoc.h",
+      "blob": "d4bce1707696086f82529e6d91f10b5e14e07740"
+    },
+    {
+      "path": "ath/ath10k/spectral.c",
+      "source": "drivers/net/wireless/ath/ath10k/spectral.c",
+      "blob": "2240994390ed634afcd095e44003a3213da035c0"
+    },
+    {
+      "path": "ath/ath10k/spectral.h",
+      "source": "drivers/net/wireless/ath/ath10k/spectral.h",
+      "blob": "5f481f11c6e5b2fb33a6ffe5cdc50f4cd9e04c61"
+    },
+    {
+      "path": "ath/ath10k/swap.c",
+      "source": "drivers/net/wireless/ath/ath10k/swap.c",
+      "blob": "7198a386f2fbebede11d18677d29ac66a253124f"
+    },
+    {
+      "path": "ath/ath10k/swap.h",
+      "source": "drivers/net/wireless/ath/ath10k/swap.h",
+      "blob": "b4733b5ded34fa780361b1223da2c353a9e1432e"
+    },
+    {
+      "path": "ath/ath10k/targaddrs.h",
+      "source": "drivers/net/wireless/ath/ath10k/targaddrs.h",
+      "blob": "ba37e6c7ced08b167be13379b678454e5d22bc24"
+    },
+    {
+      "path": "ath/ath10k/testmode.c",
+      "source": "drivers/net/wireless/ath/ath10k/testmode.c",
+      "blob": "3fcefc55b74f2995be53f5d077e3a6a06aed900b"
+    },
+    {
+      "path": "ath/ath10k/testmode.h",
+      "source": "drivers/net/wireless/ath/ath10k/testmode.h",
+      "blob": "6488fd514ae351f5a49a8f7fbd80bd7f97585f67"
+    },
+    {
+      "path": "ath/ath10k/testmode_i.h",
+      "source": "drivers/net/wireless/ath/ath10k/testmode_i.h",
+      "blob": "ee1cb27c1d6001729e50a076e5a6bebd877c164f"
+    },
+    {
+      "path": "ath/ath10k/thermal.c",
+      "source": "drivers/net/wireless/ath/ath10k/thermal.c",
+      "blob": "8b15ec07b1071573cda9a4a2567e411ffd15a7ca"
+    },
+    {
+      "path": "ath/ath10k/thermal.h",
+      "source": "drivers/net/wireless/ath/ath10k/thermal.h",
+      "blob": "1f4de9fbf2b30be22e0b657062115b9c463a8326"
+    },
+    {
+      "path": "ath/ath10k/trace.c",
+      "source": "drivers/net/wireless/ath/ath10k/trace.c",
+      "blob": "421ec47c59bdf9967ad18e2de0182a488b9c5a03"
+    },
+    {
+      "path": "ath/ath10k/trace.h",
+      "source": "drivers/net/wireless/ath/ath10k/trace.h",
+      "blob": "68b78ca17eaa442d1b3c542352d66c7d9427f3f3"
+    },
+    {
+      "path": "ath/ath10k/txrx.c",
+      "source": "drivers/net/wireless/ath/ath10k/txrx.c",
+      "blob": "493bfb410aff3d842c217dab3f43c5c921a4ac0e"
+    },
+    {
+      "path": "ath/ath10k/txrx.h",
+      "source": "drivers/net/wireless/ath/ath10k/txrx.h",
+      "blob": "ecac441d83a727f1970b37b6c296b2f5dc75dce6"
+    },
+    {
+      "path": "ath/ath10k/usb.c",
+      "source": "drivers/net/wireless/ath/ath10k/usb.c",
+      "blob": "1732a4f98418df948759535dd979eceec00c06eb"
+    },
+    {
+      "path": "ath/ath10k/usb.h",
+      "source": "drivers/net/wireless/ath/ath10k/usb.h",
+      "blob": "7e4cfbb673c9a8d535af9e847e91bc912a127cab"
+    },
+    {
+      "path": "ath/ath10k/wmi-ops.h",
+      "source": "drivers/net/wireless/ath/ath10k/wmi-ops.h",
+      "blob": "f3f6b5954b270dbc5c03cb8474981695a6c8f885"
+    },
+    {
+      "path": "ath/ath10k/wmi-tlv.c",
+      "source": "drivers/net/wireless/ath/ath10k/wmi-tlv.c",
+      "blob": "16d07d619b4df9245606a227c2aa9d1a156d06b9"
+    },
+    {
+      "path": "ath/ath10k/wmi-tlv.h",
+      "source": "drivers/net/wireless/ath/ath10k/wmi-tlv.h",
+      "blob": "8a2f87d0a3a3817b0e315402f90cf49cf022049a"
+    },
+    {
+      "path": "ath/ath10k/wmi.c",
+      "source": "drivers/net/wireless/ath/ath10k/wmi.c",
+      "blob": "ce22141e5efd9ed2ca32f81b322b30a1b32595ca"
+    },
+    {
+      "path": "ath/ath10k/wmi.h",
+      "source": "drivers/net/wireless/ath/ath10k/wmi.h",
+      "blob": "0faefc0a9a405978d99b71628bcba8b47ce9e800"
+    },
+    {
+      "path": "ath/ath10k/wow.c",
+      "source": "drivers/net/wireless/ath/ath10k/wow.c",
+      "blob": "aa7b2e703f3d4bd742d8f5abf39ea2607cb1bcb1"
+    },
+    {
+      "path": "ath/ath10k/wow.h",
+      "source": "drivers/net/wireless/ath/ath10k/wow.h",
+      "blob": "14ea4e1e925eeb75e009890321b240c977cf2b44"
+    },
+    {
+      "path": "ath/ath11k/Kconfig",
+      "source": "drivers/net/wireless/ath/ath11k/Kconfig",
+      "blob": "659ef134ef168f5e5ad9a532ccd485d20d8701d5"
+    },
+    {
+      "path": "ath/ath11k/Makefile",
+      "source": "drivers/net/wireless/ath/ath11k/Makefile",
+      "blob": "d9092414b362d056d539d8e49b15a878b7e28b85"
+    },
+    {
+      "path": "ath/ath11k/ahb.c",
+      "source": "drivers/net/wireless/ath/ath11k/ahb.c",
+      "blob": "8dfe9b40c12626649639fc1dd9da0e5e0c2dcaf1"
+    },
+    {
+      "path": "ath/ath11k/ahb.h",
+      "source": "drivers/net/wireless/ath/ath11k/ahb.h",
+      "blob": "415ddfd2665497bb80e772b7ffce1c71f1fd8763"
+    },
+    {
+      "path": "ath/ath11k/ce.c",
+      "source": "drivers/net/wireless/ath/ath11k/ce.c",
+      "blob": "a7a163621b21067ba5a4f96131aafdccfbda3d03"
+    },
+    {
+      "path": "ath/ath11k/ce.h",
+      "source": "drivers/net/wireless/ath/ath11k/ce.h",
+      "blob": "bcde2fcf02cf786c082ecf4bc37bec4f853f33ff"
+    },
+    {
+      "path": "ath/ath11k/core.c",
+      "source": "drivers/net/wireless/ath/ath11k/core.c",
+      "blob": "78a1b0edd8b45333f2c046d48080eb3d47c89b08"
+    },
+    {
+      "path": "ath/ath11k/core.h",
+      "source": "drivers/net/wireless/ath/ath11k/core.h",
+      "blob": "834988dad591c75349cd4dd414dedc9431e5d3d0"
+    },
+    {
+      "path": "ath/ath11k/coredump.c",
+      "source": "drivers/net/wireless/ath/ath11k/coredump.c",
+      "blob": "1949d57b007a172465fd05fdf473b4a136cf814f"
+    },
+    {
+      "path": "ath/ath11k/coredump.h",
+      "source": "drivers/net/wireless/ath/ath11k/coredump.h",
+      "blob": "3960d93852617c6aa74349c3d626719e7b4150fb"
+    },
+    {
+      "path": "ath/ath11k/dbring.c",
+      "source": "drivers/net/wireless/ath/ath11k/dbring.c",
+      "blob": "520d8b8662a282ca3ba396b3941d6155fd5ca353"
+    },
+    {
+      "path": "ath/ath11k/dbring.h",
+      "source": "drivers/net/wireless/ath/ath11k/dbring.h",
+      "blob": "2f93b78a50df0edbdfe1fb435b713b751d184c79"
+    },
+    {
+      "path": "ath/ath11k/debug.c",
+      "source": "drivers/net/wireless/ath/ath11k/debug.c",
+      "blob": "37d23a559ba3e55458fee4181116b935925b3c4c"
+    },
+    {
+      "path": "ath/ath11k/debug.h",
+      "source": "drivers/net/wireless/ath/ath11k/debug.h",
+      "blob": "cc8934d156977cfad43afe00927e5b8ea10068cf"
+    },
+    {
+      "path": "ath/ath11k/debugfs.c",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs.c",
+      "blob": "977f945b6e669e48df6df5926805b768172452d9"
+    },
+    {
+      "path": "ath/ath11k/debugfs.h",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs.h",
+      "blob": "ed7fec177588f69659b0dd9bdf66d83b511f36f0"
+    },
+    {
+      "path": "ath/ath11k/debugfs_htt_stats.c",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs_htt_stats.c",
+      "blob": "11d28c42227efaba2152465a21bd6570286acb99"
+    },
+    {
+      "path": "ath/ath11k/debugfs_htt_stats.h",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs_htt_stats.h",
+      "blob": "476689bbd4dad7ff4adb0cc6313456fff719177b"
+    },
+    {
+      "path": "ath/ath11k/debugfs_sta.c",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs_sta.c",
+      "blob": "d89d0f28d890b4d8d69f8d4a56788cf148e4a27d"
+    },
+    {
+      "path": "ath/ath11k/debugfs_sta.h",
+      "source": "drivers/net/wireless/ath/ath11k/debugfs_sta.h",
+      "blob": "ace877e19275eb8c8350c4f11bf5ea41e9d1016a"
+    },
+    {
+      "path": "ath/ath11k/dp.c",
+      "source": "drivers/net/wireless/ath/ath11k/dp.c",
+      "blob": "56b1a657e0b0f131c178e14d8ed60b28d814f04d"
+    },
+    {
+      "path": "ath/ath11k/dp.h",
+      "source": "drivers/net/wireless/ath/ath11k/dp.h",
+      "blob": "7a55afd33be82e12158143b5e8e55a2fc3b053c2"
+    },
+    {
+      "path": "ath/ath11k/dp_rx.c",
+      "source": "drivers/net/wireless/ath/ath11k/dp_rx.c",
+      "blob": "b9e976ddcbbf68e902524c263fac90117a7db741"
+    },
+    {
+      "path": "ath/ath11k/dp_rx.h",
+      "source": "drivers/net/wireless/ath/ath11k/dp_rx.h",
+      "blob": "c322e30caa9683b53e49beca2a41edde59566cef"
+    },
+    {
+      "path": "ath/ath11k/dp_tx.c",
+      "source": "drivers/net/wireless/ath/ath11k/dp_tx.c",
+      "blob": "562aba66582f3eb534a81485bff2b807cdda0ac9"
+    },
+    {
+      "path": "ath/ath11k/dp_tx.h",
+      "source": "drivers/net/wireless/ath/ath11k/dp_tx.h",
+      "blob": "795fe3b8fa0d5a6b8b904e012913f305c54fb5c1"
+    },
+    {
+      "path": "ath/ath11k/fw.c",
+      "source": "drivers/net/wireless/ath/ath11k/fw.c",
+      "blob": "07d775a7b5281ad39f8b9b2dfe74e42e540a95af"
+    },
+    {
+      "path": "ath/ath11k/fw.h",
+      "source": "drivers/net/wireless/ath/ath11k/fw.h",
+      "blob": "d9893ceb2c3dd241b97a19a615d0a2538864c8e8"
+    },
+    {
+      "path": "ath/ath11k/hal.c",
+      "source": "drivers/net/wireless/ath/ath11k/hal.c",
+      "blob": "0c797b8d0a276a24cdfb6869953a8ee4bdbf35c0"
+    },
+    {
+      "path": "ath/ath11k/hal.h",
+      "source": "drivers/net/wireless/ath/ath11k/hal.h",
+      "blob": "839095af9267e5f45286e8f62d5155bb1801ae2f"
+    },
+    {
+      "path": "ath/ath11k/hal_desc.h",
+      "source": "drivers/net/wireless/ath/ath11k/hal_desc.h",
+      "blob": "b2fd180bd28e6bff950cf176097a063b785a35b8"
+    },
+    {
+      "path": "ath/ath11k/hal_rx.c",
+      "source": "drivers/net/wireless/ath/ath11k/hal_rx.c",
+      "blob": "753bd93f02123d081480cbdb6d2026c234eb5a0d"
+    },
+    {
+      "path": "ath/ath11k/hal_rx.h",
+      "source": "drivers/net/wireless/ath/ath11k/hal_rx.h",
+      "blob": "0fa9aef9d533b8dc6a15eab76c929a735d3e15a5"
+    },
+    {
+      "path": "ath/ath11k/hal_tx.c",
+      "source": "drivers/net/wireless/ath/ath11k/hal_tx.c",
+      "blob": "b919df6ce7435ef59d61474600a64e6e565f1bbc"
+    },
+    {
+      "path": "ath/ath11k/hal_tx.h",
+      "source": "drivers/net/wireless/ath/ath11k/hal_tx.h",
+      "blob": "46d17abd808bc8a20a6f2d98df7052301946d604"
+    },
+    {
+      "path": "ath/ath11k/hif.h",
+      "source": "drivers/net/wireless/ath/ath11k/hif.h",
+      "blob": "cd9c4b838246815ecb2a10784732c009a5423b6e"
+    },
+    {
+      "path": "ath/ath11k/htc.c",
+      "source": "drivers/net/wireless/ath/ath11k/htc.c",
+      "blob": "4571d01cc33d30c1f593a972895423c1df39b58c"
+    },
+    {
+      "path": "ath/ath11k/htc.h",
+      "source": "drivers/net/wireless/ath/ath11k/htc.h",
+      "blob": "86f77eacaea7a3bdeb12fe3ef13aa8d7f79c89c4"
+    },
+    {
+      "path": "ath/ath11k/hw.c",
+      "source": "drivers/net/wireless/ath/ath11k/hw.c",
+      "blob": "caa6dc12a790b5072d5453ac123a604cf440a20a"
+    },
+    {
+      "path": "ath/ath11k/hw.h",
+      "source": "drivers/net/wireless/ath/ath11k/hw.h",
+      "blob": "52d9f4c13b1366f2339b8900cf9db91e6ff1bcff"
+    },
+    {
+      "path": "ath/ath11k/mac.c",
+      "source": "drivers/net/wireless/ath/ath11k/mac.c",
+      "blob": "f142c17aa9aa7483b7d077d51b24aa7b5fd4c48d"
+    },
+    {
+      "path": "ath/ath11k/mac.h",
+      "source": "drivers/net/wireless/ath/ath11k/mac.h",
+      "blob": "5e61eea1bb0378a071c81b0b27133d75643a1d3b"
+    },
+    {
+      "path": "ath/ath11k/mhi.c",
+      "source": "drivers/net/wireless/ath/ath11k/mhi.c",
+      "blob": "d2c44f7f9b622601ea547870c0c7f37507c2eba5"
+    },
+    {
+      "path": "ath/ath11k/mhi.h",
+      "source": "drivers/net/wireless/ath/ath11k/mhi.h",
+      "blob": "5c5c2b03c81f3ee683d0483aad9118f7126d6fea"
+    },
+    {
+      "path": "ath/ath11k/p2p.c",
+      "source": "drivers/net/wireless/ath/ath11k/p2p.c",
+      "blob": "01e14523f1fe757b497abe3eeeb45b1dead5b239"
+    },
+    {
+      "path": "ath/ath11k/p2p.h",
+      "source": "drivers/net/wireless/ath/ath11k/p2p.h",
+      "blob": "d907940a9b09676e55bca4952ac5e37ddce4d008"
+    },
+    {
+      "path": "ath/ath11k/pci.c",
+      "source": "drivers/net/wireless/ath/ath11k/pci.c",
+      "blob": "7114eca8810dbfac895eebfefe2e48673d065347"
+    },
+    {
+      "path": "ath/ath11k/pci.h",
+      "source": "drivers/net/wireless/ath/ath11k/pci.h",
+      "blob": "c33c7865145cc666394135e7fd8e10dd4462e5df"
+    },
+    {
+      "path": "ath/ath11k/pcic.c",
+      "source": "drivers/net/wireless/ath/ath11k/pcic.c",
+      "blob": "fc6e7da05c6028e30facf10d38a55f614067e44b"
+    },
+    {
+      "path": "ath/ath11k/pcic.h",
+      "source": "drivers/net/wireless/ath/ath11k/pcic.h",
+      "blob": "ac012e88bf6d4f65be3116196f010719787135eb"
+    },
+    {
+      "path": "ath/ath11k/peer.c",
+      "source": "drivers/net/wireless/ath/ath11k/peer.c",
+      "blob": "6d0126c3930185a625e33592e7b4ea72642fa395"
+    },
+    {
+      "path": "ath/ath11k/peer.h",
+      "source": "drivers/net/wireless/ath/ath11k/peer.h",
+      "blob": "3ad2f3355b14fd9c69c84e611080f272025c952e"
+    },
+    {
+      "path": "ath/ath11k/qmi.c",
+      "source": "drivers/net/wireless/ath/ath11k/qmi.c",
+      "blob": "aea56c38bf8f38982532fc90de25582c26ba4393"
+    },
+    {
+      "path": "ath/ath11k/qmi.h",
+      "source": "drivers/net/wireless/ath/ath11k/qmi.h",
+      "blob": "7968ab122b65dc28a44eca7b34904f55f717f586"
+    },
+    {
+      "path": "ath/ath11k/reg.c",
+      "source": "drivers/net/wireless/ath/ath11k/reg.c",
+      "blob": "49b79648752cf6a0875c76895ef4df4211e9d03a"
+    },
+    {
+      "path": "ath/ath11k/reg.h",
+      "source": "drivers/net/wireless/ath/ath11k/reg.h",
+      "blob": "72b48359401576d012020b360ee5d4742da0dfd4"
+    },
+    {
+      "path": "ath/ath11k/rx_desc.h",
+      "source": "drivers/net/wireless/ath/ath11k/rx_desc.h",
+      "blob": "2da6da7272789274bab98c8560ef20851717bae5"
+    },
+    {
+      "path": "ath/ath11k/spectral.c",
+      "source": "drivers/net/wireless/ath/ath11k/spectral.c",
+      "blob": "b6b0516819a6816fe7b76bab8ec769b3e6079e34"
+    },
+    {
+      "path": "ath/ath11k/spectral.h",
+      "source": "drivers/net/wireless/ath/ath11k/spectral.h",
+      "blob": "789cff7c64a72d8cfc303bdf90af52a0a7d1b9dc"
+    },
+    {
+      "path": "ath/ath11k/testmode.c",
+      "source": "drivers/net/wireless/ath/ath11k/testmode.c",
+      "blob": "a9751ea2a0b73009bfb600d51c3978200ce99114"
+    },
+    {
+      "path": "ath/ath11k/testmode.h",
+      "source": "drivers/net/wireless/ath/ath11k/testmode.h",
+      "blob": "2f62f2c4422f4d1b7af25497600df28a465cdff8"
+    },
+    {
+      "path": "ath/ath11k/thermal.c",
+      "source": "drivers/net/wireless/ath/ath11k/thermal.c",
+      "blob": "18d6eab5cce3c7382f80964365b523377e38f3f3"
+    },
+    {
+      "path": "ath/ath11k/thermal.h",
+      "source": "drivers/net/wireless/ath/ath11k/thermal.h",
+      "blob": "cdaf4e01d92eabab11b8a22f5d38417f989dc8dc"
+    },
+    {
+      "path": "ath/ath11k/trace.c",
+      "source": "drivers/net/wireless/ath/ath11k/trace.c",
+      "blob": "44ff8e9eff5d4d7f248716ebeab6257238fdcbdc"
+    },
+    {
+      "path": "ath/ath11k/trace.h",
+      "source": "drivers/net/wireless/ath/ath11k/trace.h",
+      "blob": "75246b0a82e3649baa83f08fe9266b72059b55c0"
+    },
+    {
+      "path": "ath/ath11k/wmi.c",
+      "source": "drivers/net/wireless/ath/ath11k/wmi.c",
+      "blob": "110035dae8a6183ecc8de94d3d53d9f2d36594e7"
+    },
+    {
+      "path": "ath/ath11k/wmi.h",
+      "source": "drivers/net/wireless/ath/ath11k/wmi.h",
+      "blob": "6e9354297e71d377be4499a9b4271ba5456f0dbb"
+    },
+    {
+      "path": "ath/ath11k/wow.c",
+      "source": "drivers/net/wireless/ath/ath11k/wow.c",
+      "blob": "b6f08755129fd717e5dd8af4fc8701a2e68aca05"
+    },
+    {
+      "path": "ath/ath11k/wow.h",
+      "source": "drivers/net/wireless/ath/ath11k/wow.h",
+      "blob": "c85811e3f42b2d4664b8bda40398e5808bddb985"
+    },
+    {
+      "path": "ath/debug.c",
+      "source": "drivers/net/wireless/ath/debug.c",
+      "blob": "d59d83e0ce4b9588e5169b2b28121d82935d187b"
+    },
+    {
+      "path": "ath/dfs_pattern_detector.c",
+      "source": "drivers/net/wireless/ath/dfs_pattern_detector.c",
+      "blob": "700da9f4531e3ca69865de30bcea11422e101f35"
+    },
+    {
+      "path": "ath/dfs_pattern_detector.h",
+      "source": "drivers/net/wireless/ath/dfs_pattern_detector.h",
+      "blob": "18db6f4f3568c870c38414364f972265b01e5f23"
+    },
+    {
+      "path": "ath/dfs_pri_detector.c",
+      "source": "drivers/net/wireless/ath/dfs_pri_detector.c",
+      "blob": "d07c454c9c00d2e410454dd224bfabd1df418ecd"
+    },
+    {
+      "path": "ath/dfs_pri_detector.h",
+      "source": "drivers/net/wireless/ath/dfs_pri_detector.h",
+      "blob": "86339f2b4d3a9ea2b6ae490940e1e99ed955705a"
+    },
+    {
+      "path": "ath/hw.c",
+      "source": "drivers/net/wireless/ath/hw.c",
+      "blob": "b301e6fbce6cbd5c6920d4c50692198d665ffcf1"
+    },
+    {
+      "path": "ath/key.c",
+      "source": "drivers/net/wireless/ath/key.c",
+      "blob": "0ae436bd9b665ccf43886b9688cedabfbfe36ca8"
+    },
+    {
+      "path": "ath/main.c",
+      "source": "drivers/net/wireless/ath/main.c",
+      "blob": "d79d73738a816479107b130c6c0849de72442887"
+    },
+    {
+      "path": "ath/reg.h",
+      "source": "drivers/net/wireless/ath/reg.h",
+      "blob": "3ad4c774bd22f880ad4b5dcfc0030b03f7f50584"
+    },
+    {
+      "path": "ath/regd.c",
+      "source": "drivers/net/wireless/ath/regd.c",
+      "blob": "f15e7bd690b5b55b3520ef475b459e6e1e39bdfb"
+    },
+    {
+      "path": "ath/regd.h",
+      "source": "drivers/net/wireless/ath/regd.h",
+      "blob": "774419c7f442841e0ec0c4895e4956d71b9c6991"
+    },
+    {
+      "path": "ath/regd_common.h",
+      "source": "drivers/net/wireless/ath/regd_common.h",
+      "blob": "cdb1e9a237343f4205b15ac7cc0485c81cc87faa"
+    },
+    {
+      "path": "ath/spectral_common.h",
+      "source": "drivers/net/wireless/ath/spectral_common.h",
+      "blob": "fe187c1fbeb04c2dd1160b4c4f6b8184a7ac18fa"
+    },
+    {
+      "path": "ath/testmode_i.h",
+      "source": "drivers/net/wireless/ath/testmode_i.h",
+      "blob": "980ef2f3f05f8b80f5e96038bc6f0d155311f1ab"
+    },
+    {
+      "path": "ath/trace.c",
+      "source": "drivers/net/wireless/ath/trace.c",
+      "blob": "18fb3a0719312ece35b7a6258785d34251dea79b"
+    },
+    {
+      "path": "ath/trace.h",
+      "source": "drivers/net/wireless/ath/trace.h",
+      "blob": "82aac0a4baff108549f6700c573cdd7269e42194"
+    },
+    {
+      "path": "qrtr/Kconfig",
+      "source": "net/qrtr/Kconfig",
+      "blob": "b4020b84760f315b98898d01c37c3399e63a41f4"
+    },
+    {
+      "path": "qrtr/Makefile",
+      "source": "net/qrtr/Makefile",
+      "blob": "8e0605f88a73d9bf82105d01ce02298f1eb417fa"
+    },
+    {
+      "path": "qrtr/af_qrtr.c",
+      "source": "net/qrtr/af_qrtr.c",
+      "blob": "00c51cf693f3d054f1771de5246498bf013775d0"
+    },
+    {
+      "path": "qrtr/mhi.c",
+      "source": "net/qrtr/mhi.c",
+      "blob": "80e341d2f8a4521cd7ccc515bc3012d0bc5008be"
+    },
+    {
+      "path": "qrtr/ns.c",
+      "source": "net/qrtr/ns.c",
+      "blob": "3de9350cbf307526e2b9fc524e929f07e257a9f4"
+    },
+    {
+      "path": "qrtr/qrtr.h",
+      "source": "net/qrtr/qrtr.h",
+      "blob": "3f2d28696062a56201f8774ee50fd1c3daa50708"
+    },
+    {
+      "path": "qrtr/smd.c",
+      "source": "net/qrtr/smd.c",
+      "blob": "c91bf030fbc7d973a90a1f88e90e66df42ab2bdd"
+    },
+    {
+      "path": "qrtr/tun.c",
+      "source": "net/qrtr/tun.c",
+      "blob": "304b41fea5ab0d4dcae44601d25e59b7b0637a45"
+    },
+    {
+      "path": "qmi/qmi_encdec.c",
+      "source": "drivers/soc/qcom/qmi_encdec.c",
+      "blob": "7660a960fb45ea5dd03fdea3cefa08742f57d462"
+    },
+    {
+      "path": "qmi/qmi_interface.c",
+      "source": "drivers/soc/qcom/qmi_interface.c",
+      "blob": "6500f863aae5ca218892d13233d4c9bf4b63a0f4"
+    },
+    {
+      "path": "LICENSES/GPL-2.0",
+      "source": "LICENSES/preferred/GPL-2.0",
+      "blob": "ea8e93dc44bc462a2be34e484432cf2b9ec88527"
+    },
+    {
+      "path": "LICENSES/ISC",
+      "source": "LICENSES/deprecated/ISC",
+      "blob": "8953c3142079caa26f6a6d4797f637fb3ea699e6"
+    },
+    {
+      "path": "LICENSES/BSD-3-Clause-Clear",
+      "source": "LICENSES/preferred/BSD-3-Clause-Clear",
+      "blob": "e53b56092b9051d212e5a380ae54967a88e5c88a"
+    }
+  ],
+  "modules": [
+    "ath",
+    "ath10k_core",
+    "ath10k_sdio",
+    "ath11k",
+    "ath11k_pci",
+    "qrtr",
+    "qrtr-mhi",
+    "qmi_helpers"
+  ],
+  "iw_package": {
+    "url": "https://deb.debian.org/debian/pool/main/i/iw/iw_5.19-1_arm64.deb",
+    "sha256": "f7f8441ceba4898a1456372e79cf061d09f8406aa0bbac4dd6201305a0fb90b6",
+    "size": 99840
+  }
+}

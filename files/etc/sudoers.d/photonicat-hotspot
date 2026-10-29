@@ -1,0 +1,2 @@
+# The helper accepts only validated JSON and can change only its two AP profiles.
+pcat-hotspot ALL=(root) NOPASSWD: /usr/local/sbin/photonicat-hotspotctl

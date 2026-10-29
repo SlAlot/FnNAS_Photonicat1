@@ -21,3 +21,29 @@ its original files remain intact. Only patch instructions, not the upstream bund
 are stored in this repository. A version-checked Nginx conf.d extension serves the
 adapter and a GPU identity read from the kernel's sysfs, without disabling the
 vendor's web resource recovery or authentication.
+
+Additional wireless modules use the unmodified Linux v6.18.18 ath common,
+ath10k SDIO, ath11k PCI, QRTR/MHI and Qualcomm QMI helper sources. Exact Git
+blob identities and the Debian Bookworm iw package are pinned in
+`wireless.lock.json`. The retained kernel's headers and stock cfg80211,
+mac80211 and MHI modules are used; all imported symbols are checked. The
+module source archive contains the exact build inputs and original ISC,
+BSD-3-Clause-Clear and GPL-2.0 license texts.
+
+The hotspot application uses the documented native desktop/CGI entry model:
+https://developer.fnnas.com/docs/core-concepts/app-entry/ . The pinned NAS
+version does not provide a working unified gateway route, so the app validates
+existing local NAS administrator credentials through a narrow root helper.
+Its web process runs as a dedicated unprivileged package user and never trusts
+client-supplied X-Trim headers. No default SSID, password or new administrator
+account is installed.
+
+The OTA adapter uses publicly downloadable, hash-pinned official FnNAS ARM64
+kernel and header packages from `download.liveupdate.fnnas.com`. Their transport
+URLs are obtained from the public official update endpoint; no user device ID or
+credentials are sent by the builder. Package hashes, vmlinuz fingerprints and
+reviewed DTBs are recorded in `ota-kernels.lock.json`. Our extra modules are built
+separately for each kernel; the proprietary kernel is not replaced with a generic
+distribution kernel. Kernel package hooks run before boot selection and ramdisk
+generation. An isolated overlay test executes the official package's real
+preinst/postinst without updating a user's system.

@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+if [ "$(appcenter-cli check photonicat-hotspot 2>/dev/null)" = Installed ]; then
+    exit 0
+fi
+appcenter-cli install-local --dir /usr/local/share/photonicat-hotspot --autostart yes
+# This CLI version can return exit code zero for a rejected package.
+test "$(appcenter-cli check photonicat-hotspot 2>/dev/null)" = Installed

@@ -44,7 +44,7 @@ def fetch(url, target, expected, git_blob=False):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['kernel', 'image', 'sources'])
+    parser.add_argument('mode', choices=['kernel', 'image', 'sources', 'iw'])
     parser.add_argument('destination', type=Path)
     args = parser.parse_args()
     lock = json.loads((ROOT / 'sources.lock.json').read_text())
@@ -55,7 +55,8 @@ def main():
             for future in futures:
                 future.result()
     else:
-        item = lock['target'][args.mode]
+        item = (json.loads((ROOT / 'wireless.lock.json').read_text())['iw_package']
+                if args.mode == 'iw' else lock['target'][args.mode])
         fetch(item['url'], args.destination, item['sha256'])
         assert args.destination.stat().st_size == item['size'], 'Input size mismatch'
 

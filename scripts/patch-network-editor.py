@@ -8,6 +8,7 @@ import sys
 ASSET = 'usr/trim/www/assets/Setting-CbdHMm55.js'
 ORIGINAL_SHA256 = 'b5aed22755fea83e4659a7a40fdf9d75dcf38a37f464b935fa65762fdc27ccb0'
 HELPER = '''function pcatLanSettings(value){return value.ifName==="pcatlan0"?{...value,ipv4Dhcp:false,defaultIpv4Gateway:false,ipv4Gateway:""}:value;}
+function pcatBondCandidates(ports){return ports.filter(port=>port.name!=="pcatlan0");}
 async function pcatHardwareInfo(native){if(native?.gpu?.length)return native;try{const response=await fetch("/photonicat-platform/hardware.json",{cache:"no-store",signal:AbortSignal.timeout(2000)});if(!response.ok)return native;const extra=await response.json();if(extra?.gpu?.length)return {...native,gpu:extra.gpu};}catch{}return native;}
 '''
 
@@ -19,6 +20,16 @@ def replace_once(source, old, new):
 
 
 def adapt(source):
+    source = replace_once(source, 'const h=c(x,f);return x.ifType===vt.WIRELESS?',
+        'const h=c(x,f);if(x.ifType===vt.WIRELESS)return t.jsx(me.Menu,{children:t.jsx(me.Item,{onClick:()=>window.open("/photonicat-hotspot/","_blank"),children:"热点管理"})});return x.ifType===vt.WIRELESS?')
+    source = replace_once(source, 'return U(async(c,u)=>new Promise((d,m)=>{const p=()=>{var h;(h=o.current)',
+        'return U(async(c,u)=>new Promise((d,m)=>{if(c?.ifType===vt.WIRELESS){window.open("/photonicat-hotspot/","_blank");d(void 0);return}if(c?.name==="pcatlan0"){Y.info({title:"LAN 管理口",getPopupContainer:()=>s.current,content:"此网口专用于电脑直连、DHCP 和飞牛管理。管理地址："+(c.ipv4Addr||c.ipv4?.[0]||"192.168.17.1")+"。为避免失联，不通过普通网络设置修改此端口；5G 和 WAN 口仍可正常设置。",onOk:()=>d(void 0),onCancel:()=>d(void 0)});return}const p=()=>{var h;(h=o.current)')
+    source = replace_once(source, 'return U((o,i,c)=>{Y.info({title:`${i} | ${o.name}`,icon:null,width:442,',
+        'return U((o,i,c)=>{if(o.ifType===vt.WIRELESS){window.open("/photonicat-hotspot/","_blank");c?.();return}Y.info({title:`${i} | ${o.name}`,icon:null,width:442,')
+    source = replace_once(source, 'content:t.jsx(_N,{networkBondList:i,selectNet:a,',
+                          'content:t.jsx(_N,{networkBondList:pcatBondCandidates(i),selectNet:a,')
+    source = replace_once(source, 't.jsx(me.Item,{onClick:()=>{n(x,f)},children:u("networkSettings.edit")})',
+                          't.jsx(me.Item,{onClick:()=>{n(x,f)},children:x.name==="pcatlan0"?"管理口说明":u("networkSettings.edit")})')
     source = replace_once(source, 'const m=await O.sysinfo.getHardwareInfo();a(p=>{p.hardwareInfo=m.data})',
                           'const m=await O.sysinfo.getHardwareInfo(),pcatInfo=await pcatHardwareInfo(m.data);a(p=>{p.hardwareInfo=pcatInfo})')
     source = replace_once(source, 'const v=JSON.parse(JSON.stringify(Object.assign(b)));',

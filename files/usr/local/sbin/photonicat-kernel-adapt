@@ -1,0 +1,103 @@
+#!/usr/bin/python3
+"""Install only reviewed, exact-kernel Photonicat board bundles during OTA."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+BASE = Path('/usr/lib/photonicat-adaptation/kernels')
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def checked_bundle(base, release):
+    if not re.fullmatch(r'[A-Za-z0-9.+_-]+', release):
+        raise ValueError('Invalid kernel release')
+    directory = Path(base) / release
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    if manifest['release'] != release:
+        raise ValueError('Kernel bundle release mismatch')
+    for relative, expected in manifest['files'].items():
+        if Path(relative).is_absolute() or '..' in Path(relative).parts:
+            raise ValueError('Invalid bundle path')
+        if digest(directory / relative) != expected:
+            raise ValueError('Kernel bundle checksum mismatch: ' + relative)
+    return directory, manifest
+
+
+def atomic_copy(source, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    # Resolve stock module symlinks only within the real target system.
+    if destination.is_symlink():
+        destination = destination.resolve(strict=True)
+    if destination.is_file() and digest(destination) == digest(source):
+        return
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.pcat-', delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(source.read_bytes())
+            stream.flush()
+            os.fsync(stream.fileno())
+            os.fchmod(stream.fileno(), 0o644)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def apply(root, base, release, depmod=True):
+    root = Path(root)
+    directory, manifest = checked_bundle(base, release)
+    kernel = root / f'boot/vmlinuz-{release}'
+    if digest(kernel) != manifest['vmlinuz_sha256']:
+        raise ValueError('Official kernel changed; refusing an ABI-mismatched driver')
+    # Validate every source and kernel before touching any destination.
+    target = root / f'lib/modules/{release}/kernel/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.ko'
+    if not target.is_file():
+        raise ValueError('Kernel does not contain the expected Rockchip driver')
+    atomic_copy(directory / 'dwmac-rk.ko', target)
+    for relative in manifest['files']:
+        if relative.startswith('wireless/'):
+            atomic_copy(directory / relative, root / f'lib/modules/{release}/updates/photonicat' / Path(relative).name)
+    # 10-sync-dtb runs first. Fix both its source and the boot copy so that
+    # subsequent synchronization cannot silently put back the broken DTB.
+    for relative in (f'usr/lib/linux-image-{release}/rockchip/rk3568-photonicat.dtb',
+                     'boot/dtb/rockchip/rk3568-photonicat.dtb'):
+        atomic_copy(directory / 'rk3568-photonicat.dtb', root / relative)
+    if depmod:
+        subprocess.run(['depmod', '-a', release], check=True)
+    print('Photonicat board adaptation ready for ' + release, flush=True)
+
+
+def main():
+    if os.geteuid() != 0 or len(sys.argv) not in (2, 3):
+        raise ValueError('Usage: photonicat-kernel-adapt check|apply [kernel-release] (root only)')
+    if os.environ.get('PCAT_IMAGE_BUILD') != '1':
+        compatible = Path('/proc/device-tree/compatible').read_bytes().split(b'\0')
+        if b'ariaboard,photonicat' not in compatible:
+            raise ValueError('This board adaptation is only for Photonicat 1')
+    operation = sys.argv[1]
+    release = sys.argv[2] if len(sys.argv) == 3 else os.uname().release
+    if operation == 'check':
+        checked_bundle(BASE, release)
+    elif operation == 'apply':
+        apply(Path('/'), BASE, release)
+    else:
+        raise ValueError('Unknown operation')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+        print('Photonicat kernel adaptation: ' + str(error) +
+              '. Kernel installation stopped to keep the management port available; use a supported adapter release.',
+              file=sys.stderr)
+        sys.exit(1)

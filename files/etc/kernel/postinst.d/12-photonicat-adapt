@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+# After DTB synchronization, before boot selection and initramfs generation.
+exec /usr/local/sbin/photonicat-kernel-adapt apply "$1"

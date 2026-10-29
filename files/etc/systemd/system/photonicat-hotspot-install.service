@@ -1,0 +1,14 @@
+[Unit]
+Description=Install the Photonicat hotspot management application
+Wants=trim_app_center.service
+After=trim_app_center.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/photonicat-hotspot-install
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

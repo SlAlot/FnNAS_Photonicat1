@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+# Reject an unsupported kernel before dpkg replaces the working boot files.
+exec /usr/local/sbin/photonicat-kernel-adapt check "$1"
