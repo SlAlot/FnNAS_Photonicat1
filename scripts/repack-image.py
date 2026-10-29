@@ -89,6 +89,17 @@ def main():
             shutil.copy2(installed, backup/'dwmac-rk.ko')
             shutil.copy2(dtb, backup/dtb.name)
             shutil.copy2(module, installed)
+            # The base image ships the optional trim/alternatives link before
+            # creating its target directory. Keep this extension point intact.
+            optional_link = root / f'usr/lib/modules/{release}/updates/trim/alternatives'
+            optional_target = f'/usr/trim/modules/{release}/alternatives'
+            assert optional_link.is_symlink() and os.readlink(optional_link) == optional_target, 'Unexpected trim module layout'
+            present = subprocess.run(['chroot', str(root), '/usr/bin/test', '-d', optional_target]).returncode
+            assert present in (0, 1), 'Cannot inspect optional module directory'
+            if present == 1:
+                run('chroot', str(root), '/usr/bin/install', '-d', '-m', '0755', optional_target)
+                print('Created missing upstream optional trim module directory', flush=True)
+            report['created_optional_module_directory'] = present == 1
             # FnNAS has absolute links to /usr/trim/modules. Resolve them in
             # the target root, never against the build runner's filesystem.
             dependency = run('chroot', str(root), '/usr/bin/env', '-i',
