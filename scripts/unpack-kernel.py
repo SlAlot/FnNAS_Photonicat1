@@ -21,6 +21,17 @@ with tarfile.open(archive) as outer:
         target = destination / kind
         target.mkdir(exist_ok=True)
         with tarfile.open(fileobj=io.BytesIO(outer.extractfile(member).read())) as inner:
-            # data filtering rejects escaping paths/devices and unsafe links.
-            inner.extractall(target, filter='data')
+            # These two links point into the installed system, not the build
+            # workspace. They are unnecessary for building the glue module.
+            runtime_links = {
+                '6.18.18-trim/updates/trim/alternatives': '/usr/trim/modules/6.18.18-trim/alternatives',
+                '6.18.18-trim/build': '/usr/src/linux-headers-6.18.18-trim',
+            } if kind == 'modules' else {}
+            members = []
+            for item in inner:
+                if item.issym() and runtime_links.get(item.name) == item.linkname:
+                    continue
+                members.append(item)
+            # All other entries retain path, device and link safety checks.
+            inner.extractall(target, members=members, filter='data')
 print(f'Verified and extracted kernel inputs to {destination}')
