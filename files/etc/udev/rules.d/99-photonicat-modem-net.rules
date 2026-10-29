@@ -1,0 +1,4 @@
+# RM500U-CNV in self-dialling NCM mode already routes cellular traffic.
+# Keep ModemManager from replacing its Ethernet connection with an idle GSM
+# object. Raw QMI/MBIM modes and other modem models retain their normal rules.
+ACTION=="add|change|move|bind", SUBSYSTEMS=="usb", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0900", ENV{ID_USB_INTERFACES}=="*:020d00:*", ENV{ID_MM_DEVICE_IGNORE}="1"

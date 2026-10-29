@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+"""Extend a runtime copy of the recovered native Nginx configuration."""
+import hashlib
+import json
+from pathlib import Path
+
+
+def main():
+    directory = Path('/usr/local/share/photonicat-web')
+    native_config = Path('/usr/trim/nginx/conf/nginx.conf').read_text(encoding='utf-8')
+    # The runtime copy has a different conf_prefix; retain native include paths.
+    native_config = native_config.replace('include       mime.types;',
+                                          'include /usr/trim/nginx/conf/mime.types;')
+    include = 'include conf.d/*.conf;'
+    native_config = native_config.replace(include, 'include /usr/trim/nginx/conf/conf.d/*.conf;')
+    anchor = 'include /usr/trim/nginx/conf/conf.d/*.conf;'
+    enabled = False
+    try:
+        manifest = json.loads((directory / 'manifest.json').read_text())
+        original = Path('/usr/trim/www')
+        matches = (hashlib.sha256((original / 'assets' / manifest['asset']).read_bytes()).hexdigest()
+                   == manifest['asset_sha256'] and
+                   hashlib.sha256((original / 'index.html').read_bytes()).hexdigest()
+                   == manifest['index_sha256'])
+        if matches and native_config.count(anchor) == 1:
+            native_config = native_config.replace(anchor, anchor + '\n'
+                '        include /usr/local/share/photonicat-web/nginx.conf;', 1)
+            enabled = True
+    except (OSError, ValueError, KeyError) as error:
+        # Optional UI adaptation must never prevent the native web service starting.
+        print('Photonicat web extension unavailable: ' + str(error), flush=True)
+    target = Path('/run/photonicat-web/nginx.conf')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(native_config, encoding='utf-8')
+    target.chmod(0o644)
+    # The vendor's recovery module reopens its canonical nginx.conf while
+    # retaining the -c conf_prefix. Keep its relative includes valid there too.
+    mime = target.parent / 'mime.types'
+    if not mime.exists():
+        mime.symlink_to('/usr/trim/nginx/conf/mime.types')
+    includes = target.parent / 'conf.d'
+    includes.mkdir(exist_ok=True)
+    extension = 'include /usr/trim/nginx/conf/conf.d/*.conf;\n'
+    if enabled:
+        extension += 'include /usr/local/share/photonicat-web/nginx.conf;\n'
+    (includes / 'native-and-photonicat.conf').write_text(extension, encoding='utf-8')
+    print('Photonicat web adapter enabled' if enabled else 'Keeping the native web interface', flush=True)
+
+
+if __name__ == '__main__':
+    main()

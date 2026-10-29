@@ -8,8 +8,16 @@
 
 The generated module archive includes the exact modified driver source, private headers, patch and license needed for inspection. A successful compile is not hardware validation.
 
-Factory LAN sharing uses the base image's NetworkManager 1.42 and dnsmasq-base,
-with standard `ipv4.method=shared` for DHCP, DNS and NAT. See the
+Factory LAN addressing uses the base image's NetworkManager 1.42, with a manual
+IPv4 profile compatible with the NAS editor. A separate service supplies LAN-only
+dnsmasq DHCP/DNS and scoped iptables NAT, following address changes without
+resetting saved settings. See the
 [NetworkManager IPv4 reference](https://networkmanager.dev/docs/api/1.42.0/settings-ipv4.html).
 The profiles and physical-controller naming rules are installed offline, not
 recreated by a boot-time configuration reset service.
+
+The pinned proprietary settings bundle is adapted locally during image packaging;
+its original files remain intact. Only patch instructions, not the upstream bundle,
+are stored in this repository. A version-checked Nginx conf.d extension serves the
+adapter and a GPU identity read from the kernel's sysfs, without disabling the
+vendor's web resource recovery or authentication.

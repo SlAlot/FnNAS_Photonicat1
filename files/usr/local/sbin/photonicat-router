@@ -1,0 +1,157 @@
+#!/usr/bin/python3
+"""Keep LAN DHCP/NAT independent of the NAS editor's manual IPv4 setting."""
+import ipaddress
+import json
+import os
+from pathlib import Path
+import select
+import signal
+import socket
+import subprocess
+import sys
+import time
+
+LAN = 'pcatlan0'
+FORWARD = 'PCAT_LAN_FORWARD'
+NAT = 'PCAT_LAN_NAT'
+RUNTIME = Path('/run/photonicat-router')
+STATE = Path('/var/lib/photonicat-router')
+
+
+def command(*args, check=True):
+    return subprocess.run(args, check=check, capture_output=True, text=True)
+
+
+def lan_snapshot():
+    device = Path('/sys/class/net') / LAN
+    if not device.exists():
+        return None
+    # veth is allowed only in the explicitly marked disposable CI namespace.
+    controller = (device / 'device/of_node').resolve().name
+    if controller != 'ethernet@fe2a0000' and os.environ.get('PCAT_ROUTER_TEST') != '1':
+        raise RuntimeError('LAN is not the expected physical controller')
+    entries = json.loads(command('ip', '-j', '-4', 'addr', 'show', 'dev', LAN).stdout)
+    for entry in entries:
+        for address in entry.get('addr_info', []):
+            if address.get('scope') == 'global' and address.get('family') == 'inet':
+                return str(ipaddress.IPv4Interface(f"{address['local']}/{address['prefixlen']}"))
+    return None
+
+
+def dnsmasq_configuration(address):
+    interface = ipaddress.IPv4Interface(address)
+    network = interface.network
+    if network.prefixlen > 29 or not interface.ip.is_private or interface.ip.is_link_local:
+        raise ValueError('LAN needs a private subnet with at least six usable addresses')
+    start, end = network.network_address + min(10, network.num_addresses // 4), network.broadcast_address - 1
+    # dnsmasq excludes its own interface addresses from the dynamic pool.
+    return '\n'.join((
+        'no-hosts', 'bind-dynamic', f'interface={LAN}', 'except-interface=lo',
+        f'listen-address={interface.ip}', 'dhcp-authoritative',
+        f'dhcp-range={start},{end},{network.netmask},1h',
+        f'dhcp-option=option:router,{interface.ip}', f'dhcp-option=option:dns-server,{interface.ip}',
+        f'dhcp-leasefile={STATE}/leases', 'resolv-file=/run/NetworkManager/no-stub-resolv.conf',
+        'domain-needed', 'bogus-priv', 'cache-size=150', 'log-facility=-', ''))
+
+
+def iptables(table, *args, check=True):
+    return command('iptables', '-w', '5', '-t', table, *args, check=check)
+
+
+def clear_firewall():
+    for table, parent, chain in (('filter', 'FORWARD', FORWARD), ('nat', 'POSTROUTING', NAT)):
+        while iptables(table, '-C', parent, '-j', chain, check=False).returncode == 0:
+            iptables(table, '-D', parent, '-j', chain)
+        iptables(table, '-F', chain, check=False)
+        iptables(table, '-X', chain, check=False)
+
+
+def configure_firewall(address):
+    network = str(ipaddress.IPv4Interface(address).network)
+    Path('/proc/sys/net/ipv4/ip_forward').write_text('1\n')
+    for table, chain in (('filter', FORWARD), ('nat', NAT)):
+        iptables(table, '-N', chain, check=False)
+        iptables(table, '-F', chain)
+    iptables('filter', '-A', FORWARD, '-o', LAN, '-d', network, '-m', 'conntrack', '--ctstate', 'ESTABLISHED,RELATED', '-j', 'ACCEPT')
+    iptables('filter', '-A', FORWARD, '-i', LAN, '-s', network, '-j', 'ACCEPT')
+    iptables('filter', '-A', FORWARD, '-i', LAN, '-o', LAN, '-j', 'ACCEPT')
+    iptables('filter', '-A', FORWARD, '-o', LAN, '-j', 'REJECT')
+    iptables('filter', '-A', FORWARD, '-i', LAN, '-j', 'REJECT')
+    iptables('nat', '-A', NAT, '-s', network, '!', '-d', network, '-j', 'MASQUERADE')
+    for table, parent, chain in (('filter', 'FORWARD', FORWARD), ('nat', 'POSTROUTING', NAT)):
+        if iptables(table, '-C', parent, '-j', chain, check=False).returncode:
+            iptables(table, '-A', parent, '-j', chain)
+
+
+def main():
+    import pwd
+    if sys.argv[1:] == ['--status']:
+        print((RUNTIME / 'status.json').read_text())
+        return
+    if os.geteuid() != 0:
+        raise SystemExit('Root is required')
+    RUNTIME.mkdir(parents=True, exist_ok=True)
+    STATE.mkdir(parents=True, exist_ok=True)
+    nobody = pwd.getpwnam('nobody')
+    os.chown(STATE, nobody.pw_uid, nobody.pw_gid)
+    STATE.chmod(0o750)
+    leases = STATE / 'leases'
+    if not leases.exists():
+        previous = Path('/var/lib/NetworkManager/dnsmasq-pcatlan0.leases')
+        leases.write_bytes(previous.read_bytes() if previous.exists() else b'')
+        os.chown(leases, nobody.pw_uid, nobody.pw_gid)
+    running, active, child = True, None, None
+
+    def stop(_signal, _frame):
+        nonlocal running
+        running = False
+
+    def stop_dns():
+        nonlocal child
+        if child is not None:
+            child.terminate()
+            try:
+                child.wait(timeout=4)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait()
+            child = None
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    with socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, socket.NETLINK_ROUTE) as events:
+        events.bind((0, 1 | 0x10))  # RTMGRP_LINK | RTMGRP_IPV4_IFADDR
+        try:
+            while running:
+                address = lan_snapshot()
+                if child is not None and child.poll() is not None:
+                    raise RuntimeError(f'LAN dnsmasq exited with {child.returncode}')
+                if address != active:
+                    stop_dns()
+                    clear_firewall()
+                    if address:
+                        configuration = dnsmasq_configuration(address)
+                        path = RUNTIME / 'dnsmasq.conf'
+                        path.write_text(configuration)
+                        configure_firewall(address)
+                        child = subprocess.Popen(['dnsmasq', '--keep-in-foreground', '--user=nobody',
+                                                  '--pid-file=', '--conf-file=' + str(path)])
+                    active = address
+                    (RUNTIME / 'status.json').write_text(json.dumps({'lan': LAN, 'address': address,
+                                                                   'dhcp': bool(address), 'nat': bool(address)}) + '\n')
+                    print(f'LAN sharing: {address or "waiting for LAN address"}', flush=True)
+                # A timeout notices a crashed child even when no netlink event occurs.
+                readable, _, _ = select.select([events], [], [], 2)
+                if readable:
+                    events.recv(65536)
+                    # Drain a batch of link/address updates before reconciling once.
+                    while select.select([events], [], [], 0)[0]:
+                        events.recv(65536)
+                    time.sleep(0.15)
+        finally:
+            stop_dns()
+            clear_firewall()
+
+
+if __name__ == '__main__':
+    main()

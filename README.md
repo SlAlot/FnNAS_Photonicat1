@@ -4,7 +4,7 @@
 
 面向 **Photonicat 1 / RK3568** 的飞牛 ARM 社区适配，由 **SlAlot** 维护，基于 [ophub/fnnas](https://github.com/ophub/fnnas) 的 `fnnas_rockchip_1253` 镜像与官方 `6.18.18-trim` 内核。不适用于光影猫二代。
 
-**当前为适配测试阶段。构建通过仅代表编译和静态检查通过，尚待真机验收。**
+**当前为适配测试阶段。已进行一台真机的有线网络和 5G 联网验证；不同模组、长期运行和完整硬件功能仍需测试。**
 
 [测试固件](https://github.com/SlAlot/FnNAS_Photonicat1/releases) · [自动构建](https://github.com/SlAlot/FnNAS_Photonicat1/actions/workflows/build.yml) · [问题反馈](https://github.com/SlAlot/FnNAS_Photonicat1/issues)
 
@@ -14,7 +14,7 @@
 
 | 接口 | 现象 | 本项目处理 |
 | --- | --- | --- |
-| eth0 / RGMII | MDIO 地址 3 找不到 PHY，启用返回 `-ENODEV` | 按官方板级方案将 PHY 复位放在 MDIO 探测前；需真机验证 |
+| eth0 / RGMII | MDIO 地址 3 找不到 PHY，启用返回 `-ENODEV` | 按官方板级方案将 PHY 复位放在 MDIO 探测前 |
 | eth1 / SGMII | 能力校验失败，启用返回 `-EINVAL` | 从源码编译 Rockchip 网口模块，补齐 SGMII 能力声明与初始化 |
 
 保留原 PHY 地址、GPIO 与复位延时，保留飞牛官方内核、Btrfs 和文件权限功能；同步更新 initramfs，避免早期启动继续加载旧模块。
@@ -40,9 +40,19 @@
 
 无需外接路由器即可通过 LAN 打开管理页。模组已联网时，LAN 客户端通过 NAT 共享上网；模组尚未联网时仍可访问本地管理页。**WAN 口用于接上级网络，LAN 口用于接电脑或下级交换机。**
 
-两个有线口按硬件控制器命名，避免 `eth0/eth1` 顺序变化导致 DHCP 开错端口。默认配置只随刷机预置，不在每次启动时覆盖用户设置。飞牛网络设置中请保留 LAN 的共享模式；改为普通 DHCP 客户端会停止给电脑分配地址。
+两个有线口按硬件控制器命名，避免 `eth0/eth1` 顺序变化导致 DHCP 开错端口。默认配置只随刷机预置，不在每次启动时覆盖用户设置。
+
+飞牛网络设置中，LAN 使用 **「LAN 地址（提供 DHCP）」**。可以修改局域网 IP、掩码、DNS 和 MTU，独立的 DHCP / NAT 服务随 LAN 地址调整；LAN 不作为上级 DHCP 客户端、默认出口或 OVS 端口。更改 IP 后，请让电脑重新获取地址，再用新地址的 `:5666` 端口访问。
+
+已针对 RM500U-CNV 的 NCM 自联网模式处理 ModemManager 接管冲突，避免电脑能上网但 NAS 丢失 DNS。其他模组仍按原有方式管理；不修改模组的 AT 配置和拨号模式。
 
 当前为 IPv4 共享，不额外开启 Wi-Fi 热点。5G 模组需已处于可通过 USB 网卡获取地址的联网模式；原始 QMI / MBIM 模式的拨号、APN 和 SIM 配置尚未覆盖。`192.168.100.1` 是模组侧地址，不是 LAN 管理地址。
+
+## GPU 信息
+
+设备信息页补充显示内核实际检测到的 Arm Mali-G52 型号；未加载驱动时不伪造型号。网页适配通过独立资源与 Nginx 配置扩展接入，保留飞牛原始网页文件及校验机制。上游网页版本不匹配时自动保留原始界面。
+
+**型号显示不等于硬件加速已验证。** GPU 图形计算和 MPP 视频编解码是不同部分，当前未把 OpenGL / Vulkan 或影视转码作为已验证能力。
 
 ## 验证与反馈
 
@@ -65,7 +75,7 @@ sudo photonicat-diagnostics > photonicat-network.txt 2>&1
 1. 核对上游镜像、内核包和 Linux 源文件摘要，来源变化时停止构建。
 2. 执行接口能力和设备树回归，使用对应内核头文件在原生 ARM64 编译，核对内核标识和导入符号。当前飞牛内核未启用模块符号 CRC，仍需真机验证运行时兼容性。
 3. 仅在构建机的镜像 loop 设备中修改根分区、启动分区和 initramfs；核对原始模块与设备树，保留镜像内恢复副本。
-4. 在隔离网络命名空间中使用镜像自带的 NetworkManager，实测离线 LAN 分配地址、DNS、NAT、出口优先级与有线上级切换；测试临时修改不写入固件。
+4. 在隔离网络命名空间中使用镜像自带的 NetworkManager，实测离线 LAN 分配地址、NAS 本机 DNS、客户端 DNS / NAT、出口切换、保存 LAN 设置及修改子网；测试临时修改不写入固件。
 5. 检查启动区与分区表未改变，输出测试镜像、SHA-256 清单及对应模块源码。
 
 本地检查使用 Linux，安装 GCC、device-tree-compiler 后执行：

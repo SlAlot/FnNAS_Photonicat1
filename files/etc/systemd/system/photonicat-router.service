@@ -1,0 +1,15 @@
+[Unit]
+Description=Photonicat LAN DHCP and IPv4 sharing
+Wants=NetworkManager.service
+After=NetworkManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/photonicat-router
+Restart=on-failure
+RestartSec=3
+KillMode=mixed
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

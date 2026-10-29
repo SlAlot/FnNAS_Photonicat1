@@ -1,0 +1,12 @@
+[Unit]
+Description=Photonicat SoC hardware identity
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/photonicat-hardware
+RemainAfterExit=yes
+TimeoutStartSec=70
+
+[Install]
+WantedBy=multi-user.target

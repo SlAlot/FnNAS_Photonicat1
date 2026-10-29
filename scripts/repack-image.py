@@ -21,6 +21,9 @@ spec.loader.exec_module(dtb_patch)
 router_spec = importlib.util.spec_from_file_location('install_router', ROOT / 'scripts/install-router.py')
 router = importlib.util.module_from_spec(router_spec)
 router_spec.loader.exec_module(router)
+editor_spec = importlib.util.spec_from_file_location('network_editor', ROOT / 'scripts/patch-network-editor.py')
+editor = importlib.util.module_from_spec(editor_spec)
+editor_spec.loader.exec_module(editor)
 
 def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
@@ -113,6 +116,7 @@ def main():
             assert 'ERROR:' not in dependency.stderr, 'Target module dependency generation reported errors'
             dtb_report = dtb_patch.patch(dtb, target['original_dtb_sha256'])
             report['router'] = router.install(root)
+            report['router']['editor'] = editor.patch(root)
             (root/'usr/local/sbin').mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT/'scripts/collect-network.sh', root/'usr/local/sbin/photonicat-diagnostics')
             (root/'usr/local/sbin/photonicat-diagnostics').chmod(0o755)
@@ -146,12 +150,15 @@ def main():
             naming_rules = list(extracted.rglob('70-photonicat-net.rules'))
             assert naming_rules and all(sha(path) == sha(ROOT/'files/etc/udev/rules.d/70-photonicat-net.rules')
                                         for path in naming_rules), 'Missing early-boot LAN/WAN naming rules'
+            modem_rules = list(extracted.rglob('99-photonicat-modem-net.rules'))
+            assert modem_rules and all(sha(path) == sha(ROOT/'files/etc/udev/rules.d/99-photonicat-modem-net.rules')
+                                       for path in modem_rules), 'Missing early-boot modem mode rules'
             report.update({'dtb': dtb_report, 'base_image_sha256': target['image']['sha256'],
                            'status': 'test_image_not_hardware_verified', 'board': 'photonicat',
                            'early_boot_driver_verified': True})
             network_test = work / 'network-test'
             network_test.mkdir()
-            run('unshare', '--mount', '--net', '--pid', '--fork', '--kill-child',
+            run('unshare', '--mount', '--net', '--pid', '--uts', '--ipc', '--fork', '--kill-child',
                 '/usr/bin/env', 'PCAT_NETWORK_SANDBOX=1', 'python3', str(ROOT/'tests/router-integration.py'),
                 '--sandbox', str(root), str(network_test))
             report['router_integration'] = json.loads((network_test/'result.json').read_text())

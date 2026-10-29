@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+"""Expose the SoC GPU identity actually reported by the kernel driver."""
+import json
+import os
+from pathlib import Path
+import re
+import time
+
+
+def detect_gpu(root=Path('/')):
+    device = root / 'sys/devices/platform/fde60000.gpu'
+    try:
+        compatible = (device / 'of_node/compatible').read_bytes().split(b'\0')
+        if b'rockchip,rk3568-mali' not in compatible or not (device / 'driver').exists():
+            return []
+        identity = (device / 'gpuinfo').read_text().strip()
+        model = re.fullmatch(r'(Mali-[A-Za-z0-9]+) (\d+) cores? (r\d+p\d+) (0x[0-9a-fA-F]+)', identity)
+        if not model:
+            return []
+        return [{'vendor': 'Arm', 'device': model[1], 'kernelIdentity': identity,
+                 'driver': (device / 'driver').resolve().name, 'source': 'kernel-sysfs'}]
+    except OSError:
+        return []
+
+
+def publish(gpu):
+    target = Path('/run/photonicat-hardware/hardware.json')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'gpu': gpu}) + '\n')
+    temporary.chmod(0o644)
+    os.replace(temporary, target)
+
+
+def main():
+    # Remove a previous boot's result before waiting for late-loaded modules.
+    publish([])
+    for _ in range(60):
+        gpu = detect_gpu()
+        if gpu:
+            publish(gpu)
+            print(json.dumps({'gpu': gpu}), flush=True)
+            return
+        time.sleep(1)
+    print('No supported GPU identity available from the kernel', flush=True)
+
+
+if __name__ == '__main__':
+    main()

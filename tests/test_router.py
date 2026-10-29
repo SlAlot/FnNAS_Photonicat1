@@ -31,7 +31,7 @@ class FactoryNetworkTests(unittest.TestCase):
     def test_only_hardware_bound_lan_serves_dhcp(self):
         INSTALLER.install(self.root)
         lan, wan, modem = [self.read_profile(name) for name in ('lan', 'wan', '5g')]
-        self.assertEqual(lan['ipv4']['method'], 'shared')
+        self.assertEqual(lan['ipv4']['method'], 'manual')
         self.assertEqual(lan['ipv4']['address1'], '192.168.17.1/24')
         self.assertEqual(lan['ipv4']['never-default'], 'true')
         self.assertEqual(lan['connection']['interface-name'], 'pcatlan0')
@@ -41,6 +41,9 @@ class FactoryNetworkTests(unittest.TestCase):
         self.assertLess(int(modem['ipv4']['route-metric']), int(wan['ipv4']['route-metric']))
         self.assertEqual(set(modem['match']['driver'].strip(';').split(';')), {'cdc_ether', 'rndis_host', 'cdc_ncm'})
         self.assertNotIn('interface-name', modem['connection'])
+        service = self.root / 'usr/local/sbin/photonicat-router'
+        self.assertTrue(service.is_file())
+        self.assertTrue((self.root / 'etc/systemd/system/multi-user.target.wants/photonicat-router.service').is_symlink())
         for filename in ('lan', 'wan', '5g'):
             if os.name != 'nt':
                 self.assertEqual((self.root / f'etc/NetworkManager/system-connections/photonicat-{filename}.nmconnection').stat().st_mode & 0o777, 0o600)
@@ -59,3 +62,21 @@ class FactoryNetworkTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             INSTALLER.install(self.root)
         self.assertFalse((self.root / 'etc/NetworkManager/system-connections').exists())
+
+
+class LanServiceTests(unittest.TestCase):
+    def test_custom_lan_subnet_updates_dhcp_gateway_and_dns(self):
+        import runpy
+        router = runpy.run_path(str(ROOT / 'files/usr/local/sbin/photonicat-router'))
+        config = router['dnsmasq_configuration']('192.168.27.1/24')
+        self.assertIn('dhcp-range=192.168.27.10,192.168.27.254,255.255.255.0,1h', config)
+        self.assertIn('dhcp-option=option:router,192.168.27.1', config)
+        self.assertIn('dhcp-option=option:dns-server,192.168.27.1', config)
+        self.assertIn('interface=pcatlan0', config)
+        self.assertNotIn('interface=usb0', config)
+
+    def test_insufficient_subnet_is_rejected(self):
+        import runpy
+        router = runpy.run_path(str(ROOT / 'files/usr/local/sbin/photonicat-router'))
+        with self.assertRaises(ValueError):
+            router['dnsmasq_configuration']('192.168.17.1/31')

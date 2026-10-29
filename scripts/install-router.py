@@ -17,7 +17,7 @@ def install(root):
                    for paragraph in status.split('\n\n')), f'Missing router dependency: {package}'
     copied = []
     for source in sorted((ROOT / 'files').rglob('*')):
-        if not source.is_file():
+        if not source.is_file() or '__pycache__' in source.parts:
             continue
         relative = source.relative_to(ROOT / 'files')
         target = root / relative
@@ -27,10 +27,16 @@ def install(root):
         mode = 0o600 if source.suffix == '.nmconnection' else 0o644
         if 'initramfs-tools/hooks' in relative.as_posix():
             mode = 0o755
+        if relative.parts[:3] == ('usr', 'local', 'sbin'):
+            mode = 0o755
         target.chmod(mode)
         copied.append(str(relative))
+    wants = root / 'etc/systemd/system/multi-user.target.wants'
+    wants.mkdir(parents=True, exist_ok=True)
+    (wants / 'photonicat-router.service').symlink_to('../photonicat-router.service')
+    (wants / 'photonicat-hardware.service').symlink_to('../photonicat-hardware.service')
     return {'lan': {'interface': 'pcatlan0', 'controller': 'fe2a0000.ethernet', 'address': '192.168.17.1/24',
-                    'dhcp': True, 'dns_forwarding': True, 'nat': 'NetworkManager shared'},
+                    'dhcp': True, 'dns_forwarding': True, 'nat': 'photonicat-router'},
             'wired_wan': {'interface': 'pcatwan0', 'controller': 'fe010000.ethernet', 'metric': 600},
             'modem': {'drivers': ['cdc_ether', 'rndis_host', 'cdc_ncm'], 'metric': 100},
             'installed_files': copied}

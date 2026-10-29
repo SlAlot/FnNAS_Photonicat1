@@ -19,6 +19,9 @@ ip route
 section 'Network sharing profiles'
 nmcli -f NAME,TYPE,DEVICE connection show --active 2>/dev/null || true
 nmcli -f GENERAL,IP4 device show pcatlan0 2>/dev/null || true
+nmcli -f GENERAL,IP4 device show usb0 2>/dev/null || true
+cat /etc/resolv.conf
+cat /run/photonicat-router/status.json 2>/dev/null || true
 iptables -S FORWARD 2>/dev/null || true
 iptables -t nat -S POSTROUTING 2>/dev/null || true
 section 'Physical network device state'
@@ -61,8 +64,11 @@ fi
 section 'Kernel messages'
 dmesg | grep -Ei 'ethernet|stmmac|dwmac|motorcomm|mdio|xpcs|phy |phy:|pcat|photonicat|defer|fail|error' | tail -n 180
 section 'Service state'
-systemctl --no-pager --full status systemd-networkd NetworkManager pcat-manager swrt-pcat-manager 2>&1 || true
+systemctl --no-pager --full status systemd-networkd NetworkManager photonicat-router photonicat-hardware pcat-manager swrt-pcat-manager 2>&1 || true
 section 'Network service messages'
-journalctl -b --no-pager -n 80 -u systemd-networkd -u NetworkManager 2>&1 || true
+journalctl -b --no-pager -n 80 -u systemd-networkd -u NetworkManager -u photonicat-router 2>&1 || true
+section 'SoC GPU identity'
+cat /sys/devices/platform/fde60000.gpu/gpuinfo 2>/dev/null || true
+cat /run/photonicat-hardware/hardware.json 2>/dev/null || true
 section 'Listening web services'
 ss -lnt | grep -E 'State|:5666 |:8000 |:8001 ' || true

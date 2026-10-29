@@ -32,12 +32,15 @@ jobs:
       - name: Install validation tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y device-tree-compiler gcc shellcheck
+          sudo apt-get install -y device-tree-compiler gcc shellcheck nodejs
       - name: Validate source and board adaptation
         run: |
           python3 scripts/fetch-inputs.py sources work/source
           python3 -m unittest discover -s tests -v
           python3 -m compileall -q scripts tests
+          python3 -m py_compile files/usr/local/sbin/photonicat-router
+          python3 -m py_compile files/usr/local/sbin/photonicat-hardware
+          python3 -m py_compile files/usr/local/sbin/photonicat-web-setup
           bash -n scripts/build-module.sh
           sh -n scripts/collect-network.sh
           sh -n files/etc/initramfs-tools/hooks/photonicat-net-names
