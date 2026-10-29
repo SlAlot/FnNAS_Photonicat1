@@ -83,7 +83,7 @@ jobs:
       - name: Install image tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y btrfs-progs dosfstools kmod device-tree-compiler u-boot-tools initramfs-tools-core util-linux
+          sudo apt-get install -y btrfs-progs dosfstools kmod device-tree-compiler u-boot-tools initramfs-tools-core util-linux busybox-static
           sudo modprobe btrfs
           df -h
       - name: Download pinned base image

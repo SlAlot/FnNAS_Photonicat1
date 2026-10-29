@@ -23,52 +23,30 @@ def output(*args):
 
 
 def dhcp(interface):
-    mac = bytes.fromhex(Path(f'/sys/class/net/{interface}/address').read_text().strip().replace(':', ''))
-    xid = secrets.randbits(32)
-    header = struct.pack('!BBBBIHH4s4s4s4s16s64s128s', 1, 1, 6, 0, xid, 0, 0x8000,
-                         b'\0'*4, b'\0'*4, b'\0'*4, b'\0'*4, mac + b'\0'*10, b'\0'*64, b'\0'*128)
-    cookie = b'\x63\x82\x53\x63'
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode() + b'\0')
-        sock.settimeout(1)
-        sock.bind(('', 68))
+    hook = Path('/tmp/lease-hook.sh')
+    hook.write_text("""#!/bin/sh
+if [ "$1" = bound ] || [ "$1" = renew ]; then
+    printf '%s|%s|%s|%s|%s\\n' "$ip" "$subnet" "$router" "$dns" "$serverid" > /tmp/lan-lease.txt
+fi
+""")
+    hook.chmod(0o755)
+    run('/tmp/test-busybox', 'udhcpc', '-i', interface, '-n', '-q', '-f', '-t', '8', '-T', '2', '-s', str(hook),
+        stdout=subprocess.DEVNULL)
+    address, mask, gateway, dns, server = Path('/tmp/lan-lease.txt').read_text().strip().split('|')
+    result = {'address': address, 'server': server, 'gateway': gateway.split()[0], 'dns': dns.split()[0]}
+    assert ipaddress.ip_address(address) in ipaddress.ip_network('192.168.17.0/24') and mask == '255.255.255.0', result
+    assert result['gateway'] == result['dns'] == result['server'] == '192.168.17.1', result
+    run('ip', 'addr', 'add', address + '/24', 'dev', interface)
+    run('ip', 'route', 'add', 'default', 'via', result['gateway'])
+    print(json.dumps(result))
 
-        def exchange(message, expected):
-            for _ in range(12):
-                sock.sendto((header + cookie + message + b'\xff').ljust(300, b'\0'), ('255.255.255.255', 67))
-                deadline = time.monotonic() + 1
-                while time.monotonic() < deadline:
-                    try:
-                        packet = sock.recv(4096)
-                    except socket.timeout:
-                        break
-                    if len(packet) < 240 or struct.unpack_from('!I', packet, 4)[0] != xid:
-                        continue
-                    options, index = {}, 240
-                    while index < len(packet) and packet[index] != 255:
-                        code = packet[index]
-                        index += 1
-                        if code == 0:
-                            continue
-                        length = packet[index]
-                        index += 1
-                        options[code] = packet[index:index+length]
-                        index += length
-                    if options.get(53) == bytes([expected]):
-                        return packet, options
-            raise AssertionError(f'No DHCP message {expected} on {interface}')
 
-        offer, options = exchange(b'\x35\x01\x01\x37\x04\x01\x03\x06\x36', 2)
-        address, server = offer[16:20], options[54]
-        _, options = exchange(b'\x35\x01\x03\x32\x04' + address + b'\x36\x04' + server + b'\x37\x03\x01\x03\x06', 5)
-        result = {'address': socket.inet_ntoa(address), 'server': socket.inet_ntoa(server),
-                  'gateway': socket.inet_ntoa(options[3][:4]), 'dns': socket.inet_ntoa(options[6][:4])}
-        assert ipaddress.ip_address(result['address']) in ipaddress.ip_network('192.168.17.0/24')
-        assert result['gateway'] == result['dns'] == result['server'] == '192.168.17.1', result
-        run('ip', 'addr', 'add', result['address'] + '/24', 'dev', interface)
-        run('ip', 'route', 'add', 'default', 'via', result['gateway'])
-        print(json.dumps(result))
+def syslog():
+    with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as sock:
+        sock.bind('/dev/log')
+        Path('/dev/log').chmod(0o666)
+        while True:
+            print(sock.recv(16384).decode(errors='replace'), flush=True)
 
 
 def probe():
@@ -112,6 +90,9 @@ def inside():
         Path('/etc/NetworkManager/dnsmasq-shared.d').mkdir(parents=True, exist_ok=True)
         Path('/etc/NetworkManager/dnsmasq-shared.d/test.conf').write_text('log-dhcp\n')
         Path('/run/dbus').mkdir(parents=True, exist_ok=True)
+        run('ip', 'link', 'set', 'lo', 'up')
+        spawn('syslog', 'python3', '/tmp/router-integration.py', '--syslog')
+        wait_for('syslog', lambda: Path('/dev/log').exists())
         spawn('dbus', 'dbus-daemon', '--system', '--nofork', '--nopidfile')
         wait_for('D-Bus', lambda: Path('/run/dbus/system_bus_socket').exists())
         spawn('udev', '/usr/lib/systemd/systemd-udevd', '--resolve-names=never')
@@ -213,6 +194,7 @@ def sandbox(root, directory):
         (merged / 'dev' / name).chmod(0o666)
     (merged / 'dev/fd').symlink_to('/proc/self/fd')
     shutil.copy2(__file__, merged / 'tmp/router-integration.py')
+    shutil.copy2(shutil.which('busybox'), merged / 'tmp/test-busybox')
     run('chroot', str(merged), '/usr/bin/env', '-i', 'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL=C',
         'python3', '/tmp/router-integration.py', '--inside')
     shutil.copy2(merged / 'tmp/router-result.json', directory / 'result.json')
@@ -221,6 +203,8 @@ def sandbox(root, directory):
 if __name__ == '__main__':
     if sys.argv[1] == '--dhcp':
         dhcp(sys.argv[2])
+    elif sys.argv[1] == '--syslog':
+        syslog()
     elif sys.argv[1] == '--probe':
         probe()
     elif sys.argv[1] == '--inside':
