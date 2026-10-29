@@ -30,7 +30,7 @@ if [ "$1" = bound ] || [ "$1" = renew ]; then
 fi
 """)
     hook.chmod(0o755)
-    run('/tmp/test-busybox', 'udhcpc', '-i', interface, '-n', '-q', '-f', '-t', '8', '-T', '2', '-s', str(hook),
+    run('/tmp/busybox', 'udhcpc', '-i', interface, '-n', '-q', '-f', '-t', '8', '-T', '2', '-s', str(hook),
         stdout=subprocess.DEVNULL)
     address, mask, gateway, dns, server = Path('/tmp/lan-lease.txt').read_text().strip().split('|')
     result = {'address': address, 'server': server, 'gateway': gateway.split()[0], 'dns': dns.split()[0]}
@@ -194,7 +194,7 @@ def sandbox(root, directory):
         (merged / 'dev' / name).chmod(0o666)
     (merged / 'dev/fd').symlink_to('/proc/self/fd')
     shutil.copy2(__file__, merged / 'tmp/router-integration.py')
-    shutil.copy2(shutil.which('busybox'), merged / 'tmp/test-busybox')
+    shutil.copy2(shutil.which('busybox'), merged / 'tmp/busybox')
     run('chroot', str(merged), '/usr/bin/env', '-i', 'PATH=/usr/sbin:/usr/bin:/sbin:/bin', 'LC_ALL=C',
         'python3', '/tmp/router-integration.py', '--inside')
     shutil.copy2(merged / 'tmp/router-result.json', directory / 'result.json')
