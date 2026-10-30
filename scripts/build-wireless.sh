@@ -11,3 +11,5 @@ make -C "$headers" M="$source_dir" ARCH=arm64 CC=gcc-12 HOSTCC=gcc-12 -j2 \
 python3 scripts/verify-wireless.py "$source_dir" "$headers" dist/module/wireless/build.json
 find "$source_dir" -name '*.ko' -exec cp '{}' dist/module/wireless/ ';'
 python3 scripts/fetch-inputs.py iw dist/module/iw.deb
+python3 scripts/prepare-ap-driver.py "$headers" "$PWD/work/kernel/modules" \
+    "$PWD/dist/module/ap-drivers" "$PWD/work/ap-wireless-source"

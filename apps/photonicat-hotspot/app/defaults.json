@@ -1,0 +1,18 @@
+{
+  "board": {
+    "enabled": true,
+    "ssid": "SlAlot-GLM-2.4G",
+    "password": "12345678",
+    "band": "bg",
+    "channel": 0,
+    "bandwidth": 40
+  },
+  "external": {
+    "enabled": true,
+    "ssid": "SlAlot-GLM",
+    "password": "12345678",
+    "band": "a",
+    "channel": 0,
+    "bandwidth": 80
+  }
+}

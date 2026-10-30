@@ -5,3 +5,12 @@
 *.yml text eol=lf
 *.json text eol=lf
 files/** text eol=lf
+*.js text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+apps/**/cmd/* text eol=lf
+apps/**/manifest text eol=lf
+apps/**/app/ui/config text eol=lf
+
+# Preserve exact upstream patch bytes, including context-line whitespace.
+vendor/*.patch -whitespace

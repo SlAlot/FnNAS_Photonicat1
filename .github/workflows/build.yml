@@ -3,7 +3,7 @@ name: Build Photonicat FnNAS
 on:
   push:
     branches: [main]
-    paths: ['files/**', 'apps/**', 'scripts/**', 'tests/**', 'vendor/**', 'sources.lock.json', 'wireless.lock.json', 'ota-kernels.lock.json', '.github/workflows/**']
+    paths: ['files/**', 'apps/**', 'scripts/**', 'tests/**', 'vendor/**', '*lock.json', '.github/workflows/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -42,30 +42,52 @@ jobs:
           python3 -m py_compile files/usr/local/sbin/photonicat-hardware
           python3 -m py_compile files/usr/local/sbin/photonicat-web-setup
           python3 -m py_compile files/usr/local/sbin/photonicat-hotspotctl
+          python3 -m py_compile files/usr/local/sbin/photonicat-hotspot-width
           python3 -m py_compile files/usr/local/sbin/photonicat-kernel-adapt
           node --check apps/photonicat-hotspot/app/www/app.js
+          node --check apps/photonicat-hotspot/app/www/login.js
+          npm ci --prefix tests/ui --ignore-scripts --no-audit --no-fund
+          node tests/test-login-ui.cjs
           bash -n scripts/build-module.sh
           bash -n scripts/build-wireless.sh
           bash -n scripts/build-ota-modules.sh
           sh -n scripts/collect-network.sh
           sh -n files/usr/local/sbin/photonicat-hotspot-install
-          sh -n apps/photonicat-hotspot/cmd/main
+          sh -n files/usr/local/sbin/photonicat-panel-install
+          bash -n apps/photonicat-hotspot/cmd/main
           sh -n files/etc/initramfs-tools/hooks/photonicat-net-names
+          sh -n files/etc/NetworkManager/dispatcher.d/pre-up.d/90-photonicat-ap-width
           shellcheck scripts/build-module.sh scripts/build-wireless.sh scripts/build-ota-modules.sh scripts/collect-network.sh files/etc/initramfs-tools/hooks/* files/etc/kernel/preinst.d/* files/etc/kernel/postinst.d/*
           git diff --check
   module:
     needs: validate
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - name: Check out pinned network panel sources
+        uses: actions/checkout@v4
+        with:
+          repository: SlAlot/wlmb-server
+          ref: cf7f8095d091255108088a6ac3ae22fb54084ae5
+          path: work/wlmb-upstream
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249
+        with:
+          toolchain: 1.98.1
+          targets: aarch64-unknown-linux-musl
       - name: Install native build tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y gcc-12 g++-12 make bc bison flex libelf-dev libssl-dev kmod device-tree-compiler
       - name: Compile and verify kernel ABI
         run: bash scripts/build-module.sh 2>&1 | tee module-build.log
+      - name: Build the native network panel
+        run: |
+          linker="$(find "$(rustc --print sysroot)/lib/rustlib" -type f -name rust-lld -print -quit)"
+          test -n "$linker"
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER="$linker"
+          python3 scripts/build-panel.py work/wlmb-upstream dist/module/panel
       - uses: actions/upload-artifact@v4
         with:
           name: photonicat-network-module

@@ -154,7 +154,9 @@ def main():
             dtb_report = dtb_patch.patch(dtb, target['original_dtb_sha256'])
             bundles.install(root, module_dir)
             report['router'] = router.install(root)
-            hotspot.prepare(root / 'usr/local/share/photonicat-hotspot')
+            hotspot.prepare(root / 'usr/local/share/photonicat-hotspot', module_dir/'ap-drivers')
+            assert (module_dir/'panel/manifest').is_file(), 'Missing native network panel'
+            shutil.copytree(module_dir/'panel',root/'usr/local/share/wlmb-fnos')
             report['router']['editor'] = editor.patch(root)
             (root/'usr/local/sbin').mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT/'scripts/collect-network.sh', root/'usr/local/sbin/photonicat-diagnostics')

@@ -43,6 +43,10 @@ class FactoryNetworkTests(unittest.TestCase):
         self.assertNotIn('interface-name', modem['connection'])
         service = self.root / 'usr/local/sbin/photonicat-router'
         self.assertTrue(service.is_file())
+        width_hook = self.root / 'etc/NetworkManager/dispatcher.d/pre-up.d/90-photonicat-ap-width'
+        self.assertTrue(width_hook.is_file())
+        if os.name != 'nt':
+            self.assertEqual(width_hook.stat().st_mode & 0o777, 0o755)
         self.assertTrue((self.root / 'etc/systemd/system/multi-user.target.wants/photonicat-router.service').is_symlink())
         for filename in ('lan', 'wan', '5g'):
             if os.name != 'nt':

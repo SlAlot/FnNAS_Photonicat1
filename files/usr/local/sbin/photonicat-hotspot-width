@@ -1,0 +1,14 @@
+#!/usr/bin/python3
+"""Restore only the matching Photonicat AP's saved width before NM reports it up."""
+import os
+import runpy
+import sys
+
+if os.geteuid() != 0 or len(sys.argv) != 2:
+    raise SystemExit(1)
+try:
+    runpy.run_path('/usr/local/sbin/photonicat-hotspotctl')['restore_width'](
+        sys.argv[1], os.environ.get('CONNECTION_UUID', ''))
+except Exception as error:
+    print('Photonicat hotspot width: ' + str(error), file=sys.stderr)
+    raise SystemExit(1)

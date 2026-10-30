@@ -1,10 +1,59 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
-case "$1" in
+: "${TRIM_APPDEST:?Missing app directory}"
+: "${TRIM_PKGVAR:?Missing app data directory}"
+: "${TRIM_USERNAME:?Missing app user}"
+: "${TRIM_GROUPNAME:?Missing app group}"
+state="$TRIM_PKGVAR/runtime"
+port="${TRIM_SERVICE_PORT:-1118}"
+export LC_ALL=C
+fail() { printf '%s\n' "$1" > "${TRIM_TEMP_LOGFILE:-/dev/stderr}"; exit 1; }
+valid_pid() {
+    local name="$1" pid
+    [ -r "$state/$name.pid" ] || return 1
+    read -r pid < "$state/$name.pid"
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    [ -r "/proc/$pid/cmdline" ] || return 1
+    tr '\0' '\n' < "/proc/$pid/cmdline" | grep -Fqx -- "$TRIM_APPDEST/$name.py" || return 1
+    kill -0 "$pid" 2>/dev/null
+}
+stop_services() {
+    local name pid
+    for name in server backend; do
+        if valid_pid "$name"; then read -r pid < "$state/$name.pid"; kill -TERM "$pid" 2>/dev/null || true; fi
+    done
+    for _ in {1..120}; do
+        if ! valid_pid backend && ! valid_pid server; then
+            if compgen -G "$state/owner-*.json" >/dev/null || [ -e "$state/driver-owner.json" ]; then
+                /usr/bin/python3 "$TRIM_APPDEST/backend.py" "$TRIM_APPDEST" "$TRIM_PKGVAR" "$TRIM_USERNAME" "$TRIM_GROUPNAME" --cleanup >> "$state/backend.log" 2>&1 || return 1
+            fi
+            return 0
+        fi
+        sleep .5
+    done
+    return 1
+}
+case "${1:-}" in
     start)
-        systemctl start photonicat-hotspot.service
+        [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1024 ] && [ "$port" -le 65535 ] || fail '热点管理端口无效'
+        if valid_pid backend && valid_pid server; then exit 0; fi
+        stop_services || fail '旧热点进程尚未退出，请稍后重试'
+        install -d -m 750 -o root -g "$TRIM_GROUPNAME" "$TRIM_PKGVAR" "$state"
+        umask 027
+        /usr/bin/python3 "$TRIM_APPDEST/backend.py" "$TRIM_APPDEST" "$TRIM_PKGVAR" "$TRIM_USERNAME" "$TRIM_GROUPNAME" >> "$state/backend.log" 2>&1 &
+        echo "$!" > "$state/backend.pid"
+        ready=false
+        for _ in {1..900}; do
+            if [ -S "$state/backend.sock" ]; then ready=true; break; fi
+            sleep .1
+        done
+        [ "$ready" = true ] || { stop_services || true; fail '热点管理后端启动失败'; }
+        runuser -u "$TRIM_USERNAME" -- /usr/bin/python3 "$TRIM_APPDEST/server.py" "$state/backend.sock" "$port" >> "$state/web.log" 2>&1 &
+        echo "$!" > "$state/server.pid"
+        sleep 1
+        valid_pid server || { stop_services || true; fail '热点网页服务启动失败，请检查端口'; }
         ;;
-    stop) systemctl stop photonicat-hotspot.service ;;
-    status) systemctl is-active --quiet photonicat-hotspot.service || exit 3 ;;
+    stop) stop_services || fail '热点尚未完全停止，请稍后重试' ;;
+    status) valid_pid backend && valid_pid server && exit 0; exit 3 ;;
     *) exit 1 ;;
 esac

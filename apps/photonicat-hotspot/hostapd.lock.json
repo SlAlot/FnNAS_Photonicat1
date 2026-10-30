@@ -1,0 +1,6 @@
+{
+  "version": "2:2.10-12+deb12u3",
+  "url": "https://deb.debian.org/debian/pool/main/w/wpa/hostapd_2.10-12+deb12u3_arm64.deb",
+  "sha256": "876643852816092cfc9a4190cc83f54e2a7cba72bc18728c53c159941dd20c13",
+  "architecture": "arm64"
+}

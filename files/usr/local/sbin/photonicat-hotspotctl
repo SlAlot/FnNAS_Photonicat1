@@ -17,7 +17,7 @@ ROLES = {'ath10k_sdio': ('board', '板载 QCA9377', '192.168.18.1/24'),
 
 
 def run(*arguments, check=True):
-    result = subprocess.run(arguments, capture_output=True, text=True, timeout=30)
+    result = subprocess.run(arguments, capture_output=True, text=True, timeout=60)
     if check and result.returncode:
         raise ValueError(result.stderr.strip()[:500] or '网络操作失败')
     return result
@@ -49,6 +49,127 @@ def profile(role):
     return PROFILES / ('photonicat-ap-' + role + '.nmconnection')
 
 
+def choose_channel(allowed, band, scan):
+    preferred = [channel for channel in (1, 6, 11) if channel in allowed] if band == 'bg' else allowed
+    candidates = preferred or allowed
+    observations = []
+    for block in re.split(r'^BSS ', scan, flags=re.M)[1:]:
+        frequency = re.search(r'^\s*freq:\s*(\d+)', block, re.M)
+        signal = re.search(r'^\s*signal:\s*(-?[\d.]+)', block, re.M)
+        if frequency and signal:
+            observations.append((int(frequency[1]), float(signal[1])))
+    def score(channel):
+        frequency = 2407 + 5 * channel if band == 'bg' else 5000 + 5 * channel
+        return sum(max(0, 1 - abs(other - frequency) / (25 if band == 'bg' else 80))
+                   * 10 ** (min(0, power) / 10) for other, power in observations)
+    return min(candidates, key=lambda channel: (score(channel), candidates.index(channel)))
+
+
+def channel_plan(allowed, band, channel, width):
+    """Return secondary offset and center frequency using AP-allowed channels only."""
+    if channel not in allowed:
+        raise ValueError('所选信道不可用于热点')
+    frequency = 2407 + 5 * channel if band == 'bg' else 5000 + 5 * channel
+    if width in (0, 20):
+        return 0, frequency
+    if width == 40:
+        offsets = (1, -1) if band == 'bg' and channel <= 7 else (-1, 1)
+        for offset in offsets:
+            other = channel + 4 * offset
+            if other in allowed and (band == 'bg' or min(channel, other) % 8 == (5 if channel >= 149 else 4)):
+                return offset, frequency + 10 * offset
+    if band == 'a' and width in (80, 160):
+        starts = (36, 52, 100, 116, 132, 149, 165) if width == 80 else (36, 100, 149)
+        for start in starts:
+            group = list(range(start, start + width // 5, 4))
+            if channel in group and all(item in allowed for item in group):
+                return (1 if group.index(channel) % 2 == 0 else -1), 5000 + 5 * start + width // 2 - 10
+    raise ValueError('所选信道没有足够的可用频宽，请换一个信道或降低频宽')
+
+
+def phy_capabilities(info):
+    channels, widths, blocked = {'bg': [], 'a': []}, {'bg': {}, 'a': {}}, {'bg': False, 'a': False}
+    sections = re.split(r'\n\s*Band \d+:', info)
+    for section in sections[1:]:
+        candidates = []
+        for line in section.splitlines():
+            match = re.search(r'\* (\d+) MHz \[(\d+)\]', line)
+            if not match:
+                continue
+            frequency, channel = map(int, match.groups())
+            band = 'bg' if 2400 <= frequency < 2500 else 'a' if 5000 <= frequency < 5900 else None
+            if not band:
+                continue
+            if any(word in line for word in ('disabled', 'no IR', 'radar detection')):
+                blocked[band] = True
+                continue
+            channels[band].append(channel)
+            candidates.append((band, channel, line))
+        for band, channel, flags in candidates:
+            supported = [20]
+            possible = [40] if 'HT20/HT40' in section else []
+            if band == 'a' and 'VHT Capabilities' in section:
+                possible.append(80)
+                if 'Supported Channel Width: 160 MHz' in section:
+                    possible.append(160)
+            for width in possible:
+                try:
+                    offset, _ = channel_plan(channels[band], band, channel, width)
+                    if width >= 40 and ('no HT40+' if offset > 0 else 'no HT40-') in flags:
+                        continue
+                    if width >= 80 and 'no 80MHz' in flags or width == 160 and 'no 160MHz' in flags:
+                        continue
+                    supported.append(width)
+                except ValueError:
+                    pass
+            widths[band][str(channel)] = supported
+    return channels, widths, blocked
+
+
+def restore_width(interface, connection_uuid):
+    """NM pre-up hook: restore width on our own AP after each native activation."""
+    identities = {str(uuid.uuid5(uuid.NAMESPACE_DNS, 'photonicat.ap.' + role)) for role in ('board', 'external')}
+    if connection_uuid not in identities:
+        return
+    card = next((item for item in devices() if item['interface'] == interface), None)
+    if not card or connection_uuid != str(uuid.uuid5(uuid.NAMESPACE_DNS, 'photonicat.ap.' + card['id'])):
+        return
+    saved = parser(profile(card['id']))
+    width = saved.getint('user', 'photonicat.bandwidth', fallback=0)
+    if width == 0:
+        return
+    channel, band = saved.getint('wifi', 'channel'), saved.get('wifi', 'band')
+    if width not in card['channel_widths'][band].get(str(channel), []):
+        raise ValueError('当前驱动不再允许保存的热点频宽，请重新配置')
+    offset, center = channel_plan(card['channels'][band], band, channel, width)
+    status = run('/usr/sbin/wpa_cli', '-i', interface, 'status').stdout
+    match = re.search(r'^id=(\d+)$', status, re.M)
+    if not match or not re.search(r'^mode=AP$', status, re.M):
+        raise ValueError('热点尚未准备好应用频宽')
+    network = match[1]
+    def control(*args):
+        if run('/usr/sbin/wpa_cli', '-i', interface, *args).stdout.strip() != 'OK':
+            raise ValueError('此系统的热点服务无法应用频宽')
+    for key, value in (('ht40', offset), ('vht', int(width >= 80)),
+                       ('max_oper_chwidth', 2 if width == 160 else 1 if width == 80 else 0),
+                       ('vht_center_freq1', center if width >= 80 else 0)):
+        control('set_network', network, key, str(value))
+    control('disable_network', network)
+    control('enable_network', network)
+    for _ in range(40):
+        mode = run('/usr/sbin/iw', 'dev', interface, 'info').stdout
+        actual = re.search(r'width: (\d+) MHz', mode)
+        status = run('/usr/sbin/wpa_cli', '-i', interface, 'status').stdout
+        if actual and 'wpa_state=COMPLETED' in status and (int(actual[1]) == width or width == 40 and int(actual[1]) == 20):
+            marker = Path('/run/photonicat-ap-width-' + card['id'] + '.json')
+            descriptor = os.open(marker, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(descriptor, 'w') as output:
+                json.dump({'width': width, 'channel': channel}, output)
+            return
+        time.sleep(.5)
+    raise ValueError('热点没有按所选频宽启动，请降低频宽后重试')
+
+
 def devices():
     result = []
     for phy in sorted(Path('/sys/class/ieee80211').glob('*')):
@@ -66,24 +187,23 @@ def devices():
         mac = link.get('permaddr', link['address'])
         assert re.fullmatch(r'([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}', mac)
         info = run('/usr/sbin/iw', 'phy', phy.name, 'info').stdout
-        channels = {'bg': [], 'a': []}
-        for line in info.splitlines():
-            match = re.search(r'\* (\d+) MHz \[(\d+)\]', line)
-            if not match or any(word in line for word in ('disabled', 'no IR', 'radar detection')):
-                continue
-            frequency, channel = map(int, match.groups())
-            band = 'bg' if 2400 <= frequency < 2500 else 'a' if 5000 <= frequency < 5900 else None
-            if band:
-                channels[band].append(channel)
+        channels, channel_widths, blocked = phy_capabilities(info)
         saved = parser(profile(role))
         data = saved['wifi'] if saved.has_section('wifi') else {}
         enabled = saved.getboolean('connection', 'autoconnect', fallback=False)
         current = run('nmcli', '-g', 'GENERAL.STATE', 'device', 'show', interface).stdout.strip()
         mode = run('/usr/sbin/iw', 'dev', interface, 'info').stdout
+        actual_channel = re.search(r'^\s*channel (\d+) \(', mode, re.M)
+        actual_width = re.search(r'width: (\d+) MHz', mode)
         result.append({'id': role, 'title': title, 'interface': interface, 'mac': mac,
-                       'channels': channels, 'supports_ap': bool(re.search(r'^\s+\* AP\s*$', info, re.M)),
+                       'channels': channels, 'channel_widths': channel_widths, 'blocked_bands': blocked,
+                       'supports_ap': bool(re.search(r'^\s+\* AP\s*$', info, re.M)),
                        'ssid': decode_ssid(data.get('ssid', '')), 'band': data.get('band', 'bg'),
-                       'channel': int(data.get('channel', '1')), 'enabled': enabled,
+                       'channel': 0 if saved.get('user', 'photonicat.channel', fallback='') == 'auto'
+                           else int(data.get('channel', '0')), 'enabled': enabled,
+                       'actual_channel': int(actual_channel[1]) if actual_channel else None,
+                       'bandwidth': saved.getint('user', 'photonicat.bandwidth', fallback=0),
+                       'actual_bandwidth': int(actual_width[1]) if actual_width else None,
                        'active': bool(re.search(r'^\s*type AP\s*$', mode, re.M)) and current.startswith('100'),
                        'password_set': saved.has_option('wifi-security', 'psk'),
                        'gateway': str(ipaddress.ip_interface(address).ip)})
@@ -122,8 +242,24 @@ def apply(request):
     if not 8 <= len(password) <= 63 or any(ord(c) < 32 or ord(c) > 126 for c in password):
         raise ValueError('密码需为 8～63 位英文字母、数字或符号')
     channel = request.get('channel')
-    if band not in card['channels'] or type(channel) is not int or channel not in card['channels'][band]:
+    if (band not in card['channels'] or not card['channels'][band] or type(channel) is not int
+            or channel != 0 and channel not in card['channels'][band]):
         raise ValueError('此网卡当前不允许在所选信道开启热点')
+    automatic = channel == 0
+    width = request.get('bandwidth', 0)
+    if type(width) is not int or width not in (0, 20, 40, 80, 160):
+        raise ValueError('热点频宽无效')
+    allowed = [value for value in card['channels'][band]
+               if width == 0 or width in card['channel_widths'][band].get(str(value), [])]
+    if not allowed or channel != 0 and channel not in allowed:
+        raise ValueError('当前信道或网卡不支持所选频宽')
+    if automatic:
+        # NM 1.42 can choose a channel marked no-IR by self-managed firmware.
+        # Select only from the live AP-allowed list instead of passing it zero.
+        scan = run('/usr/sbin/iw', 'dev', card['interface'], 'scan', check=False)
+        if scan.returncode:
+            scan = run('/usr/sbin/iw', 'dev', card['interface'], 'scan', 'dump', check=False)
+        channel = choose_channel(allowed, band, scan.stdout)
     subnet = ROLES['ath10k_sdio' if card['id'] == 'board' else 'ath11k_pci'][2]
     network = ipaddress.ip_interface(subnet).network
     for device in json.loads(run('ip', '-j', '-4', 'addr').stdout):
@@ -139,6 +275,9 @@ def apply(request):
                 '[wifi-security]\nkey-mgmt=wpa-psk\nproto=rsn;\npairwise=ccmp;\ngroup=ccmp;\n'
                 f'psk={escape(password)}\n\n[ipv4]\nmethod=shared\naddress1={subnet}\nnever-default=true\n'
                 '[ipv6]\nmethod=disabled\n')
+    contents += f'\n[user]\nphotonicat.bandwidth={width}\n'
+    if automatic:
+        contents += 'photonicat.channel=auto\n'
     temporary = path.with_suffix('.tmp')
     descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(descriptor, 'w', encoding='utf-8') as output:
@@ -150,7 +289,16 @@ def apply(request):
             run('nmcli', 'connection', 'down', 'uuid', identifier)
             time.sleep(0.5)
         run('nmcli', 'connection', 'load', str(path))
-        run('nmcli', '--wait', '20', 'connection', 'up', 'uuid', identifier, 'ifname', card['interface'])
+        marker = Path('/run/photonicat-ap-width-' + card['id'] + '.json')
+        if width:
+            marker.unlink(missing_ok=True)
+        run('nmcli', '--wait', '45', 'connection', 'up', 'uuid', identifier, 'ifname', card['interface'])
+        if width:
+            applied = json.loads(marker.read_text()) if marker.exists() else {}
+            updated = next(item for item in devices() if item['id'] == card['id'])
+            acceptable = (20, 40) if width == 40 else (width,)
+            if applied != {'width': width, 'channel': channel} or not updated['active'] or updated['actual_bandwidth'] not in acceptable:
+                raise ValueError('热点未按所选频宽启动，已恢复原设置；请降低频宽重试')
         # Loading an autoconnect-enabled profile and immediately activating it
         # races NM's own activation, restarting the AP in the middle of setup.
         run('nmcli', 'connection', 'modify', 'uuid', identifier, 'connection.autoconnect', 'yes')
@@ -163,7 +311,7 @@ def apply(request):
             path.chmod(0o600)
             run('nmcli', 'connection', 'load', str(path), check=False)
             if parser(path).getboolean('connection', 'autoconnect', fallback=False):
-                run('nmcli', '--wait', '15', 'connection', 'up', 'uuid', identifier, check=False)
+                run('nmcli', '--wait', '45', 'connection', 'up', 'uuid', identifier, check=False)
         raise
 
 

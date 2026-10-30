@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+[ "${2:-}" = pre-up ] || exit 0
+case "${CONNECTION_UUID:-}" in
+    b52f7e42-1865-501b-a120-59901d1dbdeb|0f628d7e-ffcc-5441-b58e-f31fe440c5c5)
+        exec /usr/local/sbin/photonicat-hotspot-width "$1" ;;
+    *) exit 0 ;;
+esac

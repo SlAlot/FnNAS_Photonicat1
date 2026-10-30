@@ -44,13 +44,71 @@ class HotspotPolicyTests(unittest.TestCase):
         def command(*arguments, **kwargs):
             if arguments[:3] == ('ip', '-j', '-4'):
                 return type('Result', (), {'stdout': '[{"ifname":"pcatlan0","addr_info":[{"local":"192.168.17.1","prefixlen":24}]}]'})()
-            if arguments[:3] == ('nmcli', '--wait', '20'):
+            if arguments[:3] == ('nmcli', '--wait', '45'):
                 raise ValueError('simulated firmware start failure')
             return type('Result', (), {'stdout': '', 'returncode': 0})()
         with patch.dict(self.globals, {'run': command}):
             with self.assertRaises(ValueError):
                 CTL['apply'](self.request)
         self.assertEqual(target.read_bytes(), original)
+
+    def test_automatic_channel_uses_native_selection_without_opening_forbidden_band(self):
+        def command(*arguments, **kwargs):
+            return type('Result', (), {'stdout': '[]' if arguments[:3] == ('ip', '-j', '-4') else '',
+                                       'returncode': 0})()
+        with patch.dict(self.globals, {'run': command}):
+            CTL['apply']({**self.request, 'channel': 0})
+            saved = (self.profiles / 'photonicat-ap-board.nmconnection').read_text()
+            self.assertIn('channel=1\n', saved)
+            self.assertIn('photonicat.channel=auto', saved)
+            with self.assertRaises(ValueError):
+                CTL['apply']({**self.request, 'band': 'a', 'channel': 0})
+
+    def test_auto_channel_avoids_busy_spectrum_and_forbidden_channels(self):
+        scan = 'BSS test\n\tfreq: 2412\n\tsignal: -30.0 dBm\nBSS other\n\tfreq: 2437\n\tsignal: -40.0 dBm\n'
+        self.assertEqual(CTL['choose_channel']([1, 6, 11], 'bg', scan), 11)
+        self.assertEqual(CTL['choose_channel']([6], 'bg', ''), 6)
+
+    def test_width_rejects_forbidden_or_incomplete_channel_blocks(self):
+        plan = CTL['channel_plan']
+        self.assertEqual(plan([36, 40, 44, 48], 'a', 36, 80), (1, 5210))
+        self.assertEqual(plan([36, 40, 44, 48], 'a', 40, 80), (-1, 5210))
+        self.assertEqual(plan([149, 153, 157, 161], 'a', 161, 80), (-1, 5775))
+        self.assertEqual(plan(list(range(1, 12)), 'bg', 11, 40), (-1, 2452))
+        for allowed, band, channel, width in (([36, 40, 44], 'a', 36, 80),
+            ([36, 40, 44, 48], 'a', 36, 160), ([1, 6, 11], 'bg', 1, 40)):
+            with self.assertRaises(ValueError):
+                plan(allowed, band, channel, width)
+
+    def test_phy_filters_no_ir_before_exposing_widths(self):
+        phy = '''Wiphy phy0
+        Band 1:
+          HT20/HT40
+          * 2412 MHz [1] (20.0 dBm)
+          * 2432 MHz [5] (20.0 dBm)
+        Band 2:
+          HT20/HT40
+          VHT Capabilities (0x1234):
+          Supported Channel Width: neither 160 nor 80+80
+          * 5180 MHz [36] (20.0 dBm)
+          * 5200 MHz [40] (20.0 dBm)
+          * 5220 MHz [44] (20.0 dBm)
+          * 5240 MHz [48] (20.0 dBm) (no IR)
+        '''
+        channels, widths, blocked = CTL['phy_capabilities'](phy)
+        self.assertEqual(channels['a'], [36, 40, 44])
+        self.assertEqual(widths['bg']['1'], [20, 40])
+        self.assertEqual(widths['a']['36'], [20, 40])
+        self.assertTrue(blocked['a'])
+
+    def test_width_does_not_modify_other_connection_roles(self):
+        self.assertIsNone(CTL['restore_width']('pcatlan0', 'other-uuid'))
+
+    def test_width_and_channel_must_be_compatible(self):
+        self.card['channel_widths'] = {'bg': {'1': [20], '6': [20], '11': [20]}, 'a': {}}
+        for width in (40, 80, 160, '80', True):
+            with self.assertRaises(ValueError):
+                CTL['apply']({**self.request, 'bandwidth': width})
 
 
 @unittest.skipUnless(hasattr(socket, 'AF_UNIX') and hasattr(__import__('socketserver'), 'UnixStreamServer'),

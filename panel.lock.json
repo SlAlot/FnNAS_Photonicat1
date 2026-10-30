@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/SlAlot/wlmb-server",
+  "commit": "cf7f8095d091255108088a6ac3ae22fb54084ae5",
+  "rust_toolchain": "1.98.1",
+  "native_version": "0.1.3"
+}

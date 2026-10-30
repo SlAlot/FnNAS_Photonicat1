@@ -22,6 +22,8 @@ while IFS= read -r release; do
         CONFIG_ATH11K=m CONFIG_ATH11K_PCI=m CONFIG_QRTR=m CONFIG_QRTR_MHI=m modules
     python3 scripts/verify-wireless.py "$work_dir/wireless" "$headers" "$output/wireless/build.json" "$magic"
     find "$work_dir/wireless" -name '*.ko' -exec cp '{}' "$output/wireless/" ';'
+    python3 scripts/prepare-ap-driver.py "$headers" "$work_dir/root/lib/modules/$release" \
+        "$PWD/dist/module/ap-drivers" "$work_dir/ap-wireless"
     cp "$work_dir/root/usr/lib/linux-image-$release/rockchip/rk3568-photonicat.dtb" "$output/"
     python3 scripts/prepare-ota-bundle.py "$release" "$work_dir/root" "$output"
     cp "$work_dir/image.deb" "dist/module/ota-inputs/$release.deb"

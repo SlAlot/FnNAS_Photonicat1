@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+marker=/var/lib/photonicat/panel-installed
+[ ! -e "$marker" ] || exit 0
+if [ "$(appcenter-cli check wlmb-fnos 2>/dev/null)" != Installed ]; then
+    appcenter-cli install-local --dir /usr/local/share/wlmb-fnos --autostart yes
+fi
+test "$(appcenter-cli check wlmb-fnos 2>/dev/null)" = Installed
+install -d -m 755 /var/lib/photonicat
+touch "$marker"

@@ -1,0 +1,11 @@
+{
+  "name": "photonicat-hotspot-ui-tests",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Development-only DOM tests for the native hotspot login",
+  "devDependencies": {
+    "acorn": "8.15.0",
+    "jsdom": "26.1.0",
+    "yaml": "2.9.1"
+  }
+}
